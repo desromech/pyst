@@ -83,13 +83,29 @@ def parseEscapedString(string: str) -> str:
         c = string[i]
         if c == "'" and i + 1 < stringLength and string[i + 1] == "'":
             i += 1
+        unescaped += c
         i += 1
     return unescaped
+
+def parseIntegerConstant(string: str) -> str:
+    if b'r' in string:
+        radixIndex = string.index(b'r')
+    elif b'R' in string:
+        radixIndex = string.index(b'R')
+    else:
+        return int(string)
+    
+    radix = int(string[0:radixIndex])
+    radixedInteger = int(string[radixIndex + 1:], abs(radix))
+    if radix < 0:
+        return -radixedInteger
+    else:
+        return radixedInteger
 
 def parseLiteralInteger(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     token = state.next()
     assert token.kind == TokenKind.INTEGER
-    return state, ParseTreeLiteralIntegerNode(token.sourcePosition, int(token.getValue()))
+    return state, ParseTreeLiteralIntegerNode(token.sourcePosition, parseIntegerConstant(token.getValue()))
 
 def parseLiteralFloat(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     token = state.next()
@@ -110,9 +126,9 @@ def parseLiteralSymbol(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     token = state.next()
     assert token.kind == TokenKind.SYMBOL
     symbolValue = token.getStringValue()[1:]
-    if symbolValue[0] == '"':
-        assert symbolValue[0] == '"' and symbolValue[-1] == '"'
-        symbolValue = parseCEscapedString(symbolValue[1:-1])
+    if symbolValue[0] == "'":
+        assert symbolValue[0] == "'" and symbolValue[-1] == "'"
+        symbolValue = parseEscapedString(symbolValue[1:-1])
     return state, ParseTreeLiteralSymbolNode(token.sourcePosition, symbolValue)
 
 def parseLiteral(state: ParserState) -> tuple[ParserState, ParseTreeNode]:

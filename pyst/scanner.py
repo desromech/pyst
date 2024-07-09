@@ -10,7 +10,7 @@ TokenKind = Enum('TokenKind', [
     'LEFT_PARENT', 'RIGHT_PARENT', 'LEFT_BRACKET', 'RIGHT_BRACKET', 'LEFT_CURLY_BRACKET', 'RIGHT_CURLY_BRACKET',
     'LESS_THAN', 'GREATER_THAN',
     'COLON', 'COLON_COLON', 'BAR',
-    'ASSIGNMENT', 'SEMICOLON', 'COMMA', 'DOT',
+    'ASSIGNMENT', 'SEMICOLON', 'COMMA', 'DOT', 'CARET',
     'QUOTE', 'QUASI_QUOTE', 'QUASI_UNQUOTE', 'SPLICE',
     'LITERAL_ARRAY_START', 'BYTE_ARRAY_START'
 ])
@@ -123,7 +123,7 @@ def isIdentifierMiddle(c: int) -> bool:
     return isIdentifierStart(c) or isDigit(c)
 
 def isOperatorCharacter(c: int) -> bool:
-    return c >= 0 and c in b'+-/\\*~<>=@,%|&?!'
+    return c >= 0 and c in b'+-/\\*~<>=@,%|&?!^'
 
 def scanAdvanceKeyword(state: ScannerState) -> tuple[ScannerState, Token]:
     if not isIdentifierStart(state.peek()):
@@ -330,6 +330,8 @@ def scanNextToken(state: ScannerState) -> tuple[ScannerState, Token]:
             token.kind = TokenKind.LESS_THAN
         elif tokenValue == b'>':
             token.kind = TokenKind.GREATER_THAN
+        elif tokenValue == b'^':
+            token.kind = TokenKind.CARET
         return state, token
 
     state.advance()

@@ -67,7 +67,7 @@ class TestScanner(unittest.TestCase):
         self.assertEqual(self.scanTokenKinds("[ ]"), [TokenKind.LEFT_BRACKET, TokenKind.RIGHT_BRACKET, TokenKind.END_OF_SOURCE])
         self.assertEqual(self.scanTokenKinds("{ }"), [TokenKind.LEFT_CURLY_BRACKET, TokenKind.RIGHT_CURLY_BRACKET, TokenKind.END_OF_SOURCE])
         self.assertEqual(self.scanTokenKinds(". ; : |"), [TokenKind.DOT, TokenKind.SEMICOLON, TokenKind.COLON, TokenKind.BAR, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("< >"), [TokenKind.LESS_THAN, TokenKind.GREATER_THAN, TokenKind.END_OF_SOURCE])
+        self.assertEqual(self.scanTokenKinds("< > ^"), [TokenKind.LESS_THAN, TokenKind.GREATER_THAN, TokenKind.CARET, TokenKind.END_OF_SOURCE])
         self.assertEqual(self.scanTokenKinds("`' `` `, `@"), [TokenKind.QUOTE, TokenKind.QUASI_QUOTE, TokenKind.QUASI_UNQUOTE, TokenKind.SPLICE, TokenKind.END_OF_SOURCE])
 
     def testOperator(self):
