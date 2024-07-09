@@ -171,5 +171,27 @@ class TestParser(unittest.TestCase):
         self.assertTrue(argument.isLiteralIntegerNode())
         self.assertEqual(argument.value, 42)
 
+    def testCascadeMessageSend(self):
+        node = self.parseSourceStringWithoutErrors("a + 2; yourself")
+        self.assertTrue(node.isMessageCascadeNode())
+        self.assertTrue(node.receiver.isIdentifierReferenceNode())
+        self.assertEqual(node.receiver.value, 'a')
+
+        self.assertEqual(len(node.messages), 2)
+
+        message: ParseTreeCascadeMessageNode = node.messages[0]
+        self.assertTrue(message.selector.isLiteralSymbolNode())
+        self.assertEqual(message.selector.value, '+')
+        self.assertEqual(len(message.arguments), 1)
+
+        argument: ParseTreeNode = message.arguments[0]
+        self.assertTrue(argument.isLiteralIntegerNode())
+        self.assertEqual(argument.value, 2)
+
+        message: ParseTreeCascadeMessageNode = node.messages[1]
+        self.assertTrue(message.selector.isLiteralSymbolNode())
+        self.assertEqual(message.selector.value, 'yourself')
+        self.assertEqual(len(message.arguments), 0)
+
 if __name__ == '__main__':
     unittest.main()

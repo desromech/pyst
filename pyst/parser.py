@@ -73,7 +73,7 @@ class ParserState:
         else:
             errorPosition = self.currentSourcePosition()
             self.advance()
-            return self, ParseTreeErrorNode(errorPosition, message)
+            return self, ParseTreeErrorNode(errorPosition, message, [])
 
 def parseEscapedString(string: str) -> str:
     unescaped = ''
@@ -273,10 +273,54 @@ def parseKeywordMessageSend(state: ParserState) -> tuple[ParserState, ParseTreeN
     selector = ParseTreeLiteralSymbolNode(firstKeywordSourcePosition.to(lastKeywordSourcePosition), symbolValue)
     return state, ParseTreeMessageSendNode(state.sourcePositionFrom(startPosition), receiver, selector, arguments)
 
+def parseCascadedMessage(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    startPosition = state.position
+    token = state.peek()
+    if state.peekKind() == TokenKind.IDENTIFIER:
+        state.advance()
+        selector = ParseTreeLiteralSymbolNode(token.sourcePosition, token.getStringValue())
+        return state, ParseTreeCascadeMessageNode(state.sourcePositionFrom(startPosition), selector, [])
+    elif state.peekKind() == TokenKind.KEYWORD:
+        symbolValue = ""
+        arguments = []
+        firstKeywordSourcePosition = state.peek(0).sourcePosition
+        lastKeywordSourcePosition = firstKeywordSourcePosition
+        while state.peekKind() == TokenKind.KEYWORD:
+            keywordToken = state.next()
+            lastKeywordSourcePosition = keywordToken.sourcePosition
+            symbolValue += keywordToken.getStringValue()
+            
+            state, argument = parseBinaryExpressionSequence(state)
+            arguments.append(argument)
+
+        selector = ParseTreeLiteralSymbolNode(firstKeywordSourcePosition.to(lastKeywordSourcePosition), symbolValue)
+        return state, ParseTreeCascadeMessageNode(state.sourcePositionFrom(startPosition), selector, arguments)
+    elif isBinaryExpressionOperator(state.peekKind()):
+        assert False
+    else:
+        return state, ParseTreeErrorNode(state.currentSourcePosition(), 'Expected a cascaded message send.')
+
+def parseMessageSendCascade(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    startPosition = state.position
+    state, firstMessage = parseKeywordMessageSend(state)
+    if state.peekKind() != TokenKind.SEMICOLON:
+        return state, firstMessage
+    
+    cascadeReceiver, firstCascadedMessage  = firstMessage.asMessageSendCascadeReceiverAndFirstMessage()
+    cascadedMessages = []
+    if firstCascadedMessage is not None:
+        cascadedMessages.append(firstCascadedMessage)
+
+    while state.peekKind() == TokenKind.SEMICOLON:
+        state.advance()
+        state, cascadedMessage = parseCascadedMessage(state)
+        cascadedMessages.append(cascadedMessage)
+    return state, ParseTreeMessageCascadeNode(state.sourcePositionFrom(startPosition), cascadeReceiver, cascadedMessages)
+
 def parseLowPrecedenceExpression(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     if state.peekKind() == TokenKind.KEYWORD:
         return parseKeywordApplication(state)
-    return parseKeywordMessageSend(state)
+    return parseMessageSendCascade(state)
 
 def parseAssignmentExpression(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     startPosition = state.position
@@ -302,7 +346,7 @@ def parseExpressionListUntilEndOrDelimiter(state: ParserState, delimiter: TokenK
     expectsExpression = True
     while not state.atEnd() and state.peekKind() != delimiter:
         if not expectsExpression:
-            elements.append(ParseTreeErrorNode(state.currentSourcePosition(), "Expected dot before expression."))
+            elements.append(ParseTreeErrorNode(state.currentSourcePosition(), "Expected dot before expression.", []))
 
         state, expression = parseExpression(state)
         elements.append(expression)
