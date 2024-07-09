@@ -359,8 +359,12 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
     def visitErrorNode(self, node: ParseTreeErrorNode):
         self.visitNodes(node.innerNodes)
 
+    def visitApplicationNode(self, node: ParseTreeMessageSendNode):
+        self.visitNode(node.functional)
+        self.visitNodes(node.arguments)
+
     def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
-        self.visitNode(node.store)
+        self.visitNode(node.variable)
         self.visitNode(node.value)
 
     def visitBinaryExpressionSequenceNode(self, node: ParseTreeBinaryExpressionSequenceNode):

@@ -12,6 +12,52 @@ class TestParser(unittest.TestCase):
         ast = self.parseSourceStringWithoutErrors('')
         self.assertTrue(ast.isSequenceNode())
 
+    def testApplication(self):
+        node = self.parseSourceStringWithoutErrors("a()")
+        self.assertTrue(node.isApplicationNode())
+        self.assertTrue(node.functional.isIdentifierReferenceNode())
+        self.assertEqual(node.functional.value, 'a')
+
+        self.assertEqual(len(node.arguments), 0)
+
+    def testApplication2(self):
+        node = self.parseSourceStringWithoutErrors("a(42)")
+        self.assertTrue(node.isApplicationNode())
+        self.assertTrue(node.functional.isIdentifierReferenceNode())
+        self.assertEqual(node.functional.value, 'a')
+
+        self.assertEqual(len(node.arguments), 1)
+        argument: ParseTreeNode = node.arguments[0]
+
+        self.assertTrue(argument.isLiteralIntegerNode())
+        self.assertEqual(argument.value, 42)
+
+    def testApplication3(self):
+        node = self.parseSourceStringWithoutErrors("a(42. 5)")
+        self.assertTrue(node.isApplicationNode())
+        self.assertTrue(node.functional.isIdentifierReferenceNode())
+        self.assertEqual(node.functional.value, 'a')
+
+        self.assertEqual(len(node.arguments), 2)
+        argument: ParseTreeNode = node.arguments[0]
+
+        self.assertTrue(argument.isLiteralIntegerNode())
+        self.assertEqual(argument.value, 42)
+
+        argument: ParseTreeNode = node.arguments[1]
+
+        self.assertTrue(argument.isLiteralIntegerNode())
+        self.assertEqual(argument.value, 5)
+
+    def testAssignment(self):
+        node = self.parseSourceStringWithoutErrors("a := 42")
+        self.assertTrue(node.isAssignmentNode())
+        self.assertTrue(node.variable.isIdentifierReferenceNode())
+        self.assertEqual(node.variable.value, 'a')
+
+        self.assertTrue(node.value.isLiteralIntegerNode())
+        self.assertEqual(node.value.value, 42)
+
     def testLiteralInteger(self):
         node = self.parseSourceStringWithoutErrors('42')
         self.assertTrue(node.isLiteralIntegerNode())
