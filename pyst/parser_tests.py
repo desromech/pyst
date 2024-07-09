@@ -10,7 +10,7 @@ class TestParser(unittest.TestCase):
 
     def testEmpty(self):
         ast = self.parseSourceStringWithoutErrors('')
-        self.assertTrue(ast.isSequenceNode())
+        self.assertTrue(ast.isLexicalSequenceNode())
 
     def testApplication(self):
         node = self.parseSourceStringWithoutErrors("a()")
@@ -57,6 +57,56 @@ class TestParser(unittest.TestCase):
 
         self.assertTrue(node.value.isLiteralIntegerNode())
         self.assertEqual(node.value.value, 42)
+
+    def testBlock(self):
+        node = self.parseSourceStringWithoutErrors("[]")
+        self.assertTrue(node.isBlockNode())
+        self.assertEqual(len(node.arguments), 0)
+        self.assertTrue(node.body.isLexicalSequenceNode())
+
+    def testBlockWithLiteral(self):
+        node = self.parseSourceStringWithoutErrors("[42]")
+        self.assertTrue(node.isBlockNode())
+        self.assertEqual(len(node.arguments), 0)
+        
+        self.assertTrue(node.body.isLiteralIntegerNode())
+        self.assertEqual(node.body.value, 42)
+
+    def testBlockArgument(self):
+        node = self.parseSourceStringWithoutErrors("[:a]")
+        self.assertTrue(node.isBlockNode())
+        self.assertEqual(len(node.arguments), 1)
+        self.assertIsNone(node.body)
+
+        argument: ParseTreeArgumentNode = node.arguments[0]
+        self.assertTrue(argument.isArgumentNode())
+        self.assertEqual(argument.name, 'a')
+
+    def testBlockArgument2(self):
+        node = self.parseSourceStringWithoutErrors("[:a :b]")
+        self.assertTrue(node.isBlockNode())
+        self.assertEqual(len(node.arguments), 2)
+        self.assertIsNone(node.body)
+
+        argument: ParseTreeArgumentNode = node.arguments[0]
+        self.assertTrue(argument.isArgumentNode())
+        self.assertEqual(argument.name, 'a')
+
+        argument: ParseTreeArgumentNode = node.arguments[1]
+        self.assertTrue(argument.isArgumentNode())
+        self.assertEqual(argument.name, 'b')
+
+    def testBlockArgumentWithBody(self):
+        node = self.parseSourceStringWithoutErrors("[:a | a ]")
+        self.assertTrue(node.isBlockNode())
+        self.assertEqual(len(node.arguments), 1)
+
+        argument: ParseTreeArgumentNode = node.arguments[0]
+        self.assertTrue(argument.isArgumentNode())
+        self.assertEqual(argument.name, 'a')
+
+        self.assertTrue(node.body.isIdentifierReferenceNode())
+        self.assertEqual(node.body.value, 'a')
 
     def testLiteralInteger(self):
         node = self.parseSourceStringWithoutErrors('42')

@@ -147,7 +147,7 @@ def parseIdentifier(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
 def parseTerm(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     if state.peekKind() == TokenKind.IDENTIFIER: return parseIdentifier(state)
     elif state.peekKind() == TokenKind.LEFT_PARENT: return parseParenthesis(state)
-    elif state.peekKind() == TokenKind.LEFT_CURLY_BRACKET: return parseBlock(state)
+    elif state.peekKind() == TokenKind.LEFT_BRACKET: return parseBlock(state)
     else: return parseLiteral(state)
 
 def parseParenthesis(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
@@ -167,32 +167,39 @@ def parseParenthesis(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     expression = state.expectAddingErrorToNode(TokenKind.RIGHT_PARENT, expression)
     return state, expression
 
+def parseArgument(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    startPosition = state.position
+    assert state.peekKind() == TokenKind.COLON
+    state.advance()
+    if state.peekKind() == TokenKind.IDENTIFIER:
+        nameToken = state.next()
+        return state, ParseTreeArgumentNode(state.sourcePositionFrom(startPosition), nameToken.getStringValue())
+    else:
+        return state, ParseTreeErrorNode(state.currentSourcePosition(), 'Expected an argument name.')
+
 def parseBlock(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     # {
     startPosition = state.position
-    assert state.peekKind() == TokenKind.LEFT_CURLY_BRACKET
+    assert state.peekKind() == TokenKind.LEFT_BRACKET
     state.advance()
 
-    functionalType = None
-    if state.peekKind() == TokenKind.BAR:
-        state.advance()
-        if state.peekKind() == TokenKind.BAR:
-            state.advance()
-            functionalType = ParseTreeFunctionalDependentTypeNode(state.currentSourcePosition(), None, None)
-        else:
-            state, functionalType = parseFunctionalType(state)
-            state.expectAddingErrorToNode(TokenKind.BAR, functionalType)
-            if not functionalType.isFunctionalDependentTypeNode():
-                functionalType = ParseTreeFunctionalDependentTypeNode(state.currentSourcePosition(), functionalType, None)
+    arguments = []
+    while state.peekKind() == TokenKind.COLON:
+        state, argument = parseArgument(state)
+        arguments.append(argument)
 
-    state, body = parseSequenceUntilEndOrDelimiter(state, TokenKind.RIGHT_CURLY_BRACKET)
+    hasBar = False
+    if len(arguments) != 0 and state.peekKind() == TokenKind.BAR:
+        hasBar = True
+        state.advance()
+
+    body = None
+    if len(arguments) == 0 or hasBar:
+        state, body = parseLexicalSequenceUntilEndOrDelimiter(state, TokenKind.RIGHT_BRACKET)
 
     # }
-    body = state.expectAddingErrorToNode(TokenKind.RIGHT_CURLY_BRACKET, body)
-    if functionalType is None:
-        return state, ParseTreeLexicalBlockNode(state.sourcePositionFrom(startPosition), body)
-    else:
-        return state, ParseTreeBlockNode(state.sourcePositionFrom(startPosition), functionalType, body)
+    body = state.expectAddingErrorToNode(TokenKind.RIGHT_BRACKET, body)
+    return state, ParseTreeBlockNode(state.sourcePositionFrom(startPosition), arguments, body)
 
 def parseUnaryPostfixExpression(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     startPosition = state.position
@@ -366,8 +373,17 @@ def parseSequenceUntilEndOrDelimiter(state: ParserState, delimiter: TokenKind) -
         return state, elements[0]
     return state, ParseTreeSequenceNode(state.sourcePositionFrom(initialPosition), elements)
 
+def parseLexicalSequenceUntilEndOrDelimiter(state: ParserState, delimiter: TokenKind) -> tuple[ParserState, ParseTreeNode]:
+    initialPosition = state.position
+    locals = []
+    pragmas = []
+    state, elements = parseExpressionListUntilEndOrDelimiter(state, delimiter)
+    if len(locals) == 0 and len(pragmas) == 0 and len(elements) == 1:
+        return state, elements[0]
+    return state, ParseTreeLexicalSequenceNode(state.sourcePositionFrom(initialPosition), locals, pragmas, elements)
+
 def parseTopLevelExpression(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
-    state, node = parseSequenceUntilEndOrDelimiter(state, TokenKind.END_OF_SOURCE)
+    state, node = parseLexicalSequenceUntilEndOrDelimiter(state, TokenKind.END_OF_SOURCE)
     return node
 
 def parseSourceString(sourceText: str, sourceName: str = '<string>') -> ParseTreeNode:

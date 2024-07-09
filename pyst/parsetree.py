@@ -87,11 +87,23 @@ class ParseTreeVisitor(ABC):
         pass
 
     @abstractmethod
+    def visitArgumentNode(self, node):
+        pass
+
+    @abstractmethod
+    def visitBlockNode(self, node):
+        pass
+
+    @abstractmethod
     def visitCascadeMessageNode(self, node):
         pass
 
     @abstractmethod
     def visitIdentifierReferenceNode(self, node):
+        pass
+
+    @abstractmethod
+    def visitLexicalSequenceNode(self, node):
         pass
 
     @abstractmethod
@@ -137,10 +149,16 @@ class ParseTreeNode(ABC):
     def asMessageSendCascadeReceiverAndFirstMessage(self):
         return self, None
 
+    def isArgumentNode(self) -> bool:
+        return False
+
     def isAssignmentNode(self) -> bool:
         return False
 
     def isBinaryExpressionSequenceNode(self) -> bool:
+        return False
+
+    def isBlockNode(self) -> bool:
         return False
 
     def isCascadeMessageNode(self) -> bool:
@@ -150,6 +168,9 @@ class ParseTreeNode(ABC):
         return False
 
     def isIdentifierReferenceNode(self) -> bool:
+        return False
+
+    def isLexicalSequenceNode(self) -> bool:
         return False
 
     def isLiteralNode(self) -> bool:
@@ -203,6 +224,17 @@ class ParseTreeApplicationNode(ParseTreeNode):
     def isApplicationNode(self) -> bool:
         return True
     
+class ParseTreeArgumentNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, name: str) -> None:
+        super().__init__(sourcePosition)
+        self.name = name
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitArgumentNode(self)
+
+    def isArgumentNode(self) -> bool:
+        return True
+
 class ParseTreeAssignmentNode(ParseTreeNode):
     def __init__(self, sourcePosition: SourcePosition, variable: ParseTreeNode, value: ParseTreeNode) -> None:
         super().__init__(sourcePosition)
@@ -233,6 +265,18 @@ class ParseTreeBinaryExpressionSequenceNode(ParseTreeNode):
         
         receiverSequence = ParseTreeBinaryExpressionSequenceNode(self.sourcePosition, self.elements[:-2])
         return receiverSequence, ParseTreeCascadeMessageNode(self.sourcePosition, self.elements[-2], [self.elements[-1]])
+
+class ParseTreeBlockNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, arguments: list[ParseTreeNode], body: ParseTreeNode) -> None:
+        super().__init__(sourcePosition)
+        self.arguments = arguments
+        self.body = body
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitBlockNode(self)
+
+    def isBlockNode(self) -> bool:
+        return True
 
 class ParseTreeMessageCascadeNode(ParseTreeNode):
     def __init__(self, sourcePosition: SourcePosition, receiver: ParseTreeNode, messages: list[ParseTreeNode]) -> None:
@@ -269,6 +313,19 @@ class ParseTreeIdentifierReferenceNode(ParseTreeNode):
     def isIdentifierReferenceNode(self) -> bool:
         return True
 
+class ParseTreeLexicalSequenceNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, locals: list[ParseTreeNode], pragmas: list[ParseTreeNode], elements: list[ParseTreeNode]) -> None:
+        super().__init__(sourcePosition)
+        self.locals = locals
+        self.pragmas = pragmas
+        self.elements = elements
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitLexicalSequenceNode(self)
+
+    def isLexicalSequenceNode(self) -> bool:
+        return True
+    
 class ParseTreeLiteralNode(ParseTreeNode):
     def isLiteralNode(self) -> bool:
         return True
@@ -363,6 +420,9 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
         self.visitNode(node.functional)
         self.visitNodes(node.arguments)
 
+    def visitArgumentNode(self, node: ParseTreeArgumentNode):
+        pass
+
     def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
         self.visitNode(node.variable)
         self.visitNode(node.value)
@@ -370,11 +430,18 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
     def visitBinaryExpressionSequenceNode(self, node: ParseTreeBinaryExpressionSequenceNode):
         self.visitNodes(node.elements)
 
+    def visitBlockNode(self, node: ParseTreeBlockNode):
+        self.visitNodes(node.arguments)
+        self.visitOptionalNode(node.body)
+
     def visitCascadeMessageNode(self, node: ParseTreeCascadeMessageNode):
         self.visitNode(node.selector)
         self.visitNodes(node.arguments)
 
     def visitIdentifierReferenceNode(self, node: ParseTreeIdentifierReferenceNode):
+        pass
+
+    def visitLexicalSequenceNode(self, node: ParseTreeLexicalSequenceNode):
         pass
 
     def visitLiteralNode(self, node: ParseTreeLiteralNode):
