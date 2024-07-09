@@ -127,11 +127,19 @@ class ParseTreeVisitor(ABC):
         pass
 
     @abstractmethod
+    def visitLocalVariableNode(self, node):
+        pass
+
+    @abstractmethod
     def visitMessageCascadeNode(self, node):
         pass
 
     @abstractmethod
     def visitMessageSendNode(self, node):
+        pass
+
+    @abstractmethod
+    def visitPragmaNode(self, node):
         pass
 
     @abstractmethod
@@ -191,10 +199,16 @@ class ParseTreeNode(ABC):
     def isLiteralStringNode(self) -> bool:
         return False
 
+    def isLocalVariableNode(self) -> bool:
+        return False
+
     def isMessageCascadeNode(self) -> bool:
         return False
 
     def isMessageSendNode(self) -> bool:
+        return False
+
+    def isPragmaNode(self) -> bool:
         return False
 
     def isSequenceNode(self) -> bool:
@@ -363,6 +377,18 @@ class ParseTreeLiteralIntegerNode(ParseTreeLiteralNode):
     def isLiteralIntegerNode(self) -> bool:
         return True
 
+class ParseTreePragmaNode(ParseTreeLiteralNode):
+    def __init__(self, sourcePosition: SourcePosition, selector: ParseTreeNode, arguments: list[ParseTreeNode]) -> None:
+        super().__init__(sourcePosition)
+        self.selector = selector
+        self.arguments = arguments
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitPragmaNode(self)    
+
+    def isPragmaNode(self) -> bool:
+        return True
+    
 class ParseTreeLiteralStringNode(ParseTreeLiteralNode):
     def __init__(self, sourcePosition: SourcePosition, value: str) -> None:
         super().__init__(sourcePosition)
@@ -385,6 +411,17 @@ class ParseTreeLiteralSymbolNode(ParseTreeLiteralNode):
     def isLiteralSymbolNode(self) -> bool:
         return True
 
+class ParseTreeLocalVariableNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, name: str) -> None:
+        super().__init__(sourcePosition)
+        self.name = name
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitLocalVariableNode(self)
+
+    def isLocalVariableNode(self) -> bool:
+        return True
+    
 class ParseTreeMessageSendNode(ParseTreeNode):
     def __init__(self, sourcePosition: SourcePosition, receiver: ParseTreeNode, selector: ParseTreeNode, arguments: list[ParseTreeNode]) -> None:
         super().__init__(sourcePosition)
@@ -462,6 +499,9 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
     def visitLiteralStringNode(self, node: ParseTreeLiteralStringNode):
         self.visitLiteralNode(node)
 
+    def visitLocalVariableNode(self, node: ParseTreeLocalVariableNode):
+        pass
+
     def visitMessageSendNode(self, node: ParseTreeMessageSendNode):
         self.visitOptionalNode(node.receiver)
         self.visitNode(node.selector)
@@ -470,6 +510,10 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
     def visitMessageCascadeNode(self, node: ParseTreeMessageCascadeNode):
         self.visitOptionalNode(node.receiver)
         self.visitNodes(node.messages)
+
+    def visitPragmaNode(self, node: ParseTreePragmaNode):
+        self.visitNode(node.selector)
+        self.visitNodes(node.arguments)
 
     def visitSequenceNode(self, node: ParseTreeSequenceNode):
         self.visitNodes(node.elements)

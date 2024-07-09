@@ -167,6 +167,30 @@ def parseParenthesis(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     expression = state.expectAddingErrorToNode(TokenKind.RIGHT_PARENT, expression)
     return state, expression
 
+def parseLocalVariable(state: ParserState) -> tuple[ParserState, list[ParseTreeNode]]:
+    if state.peekKind() == TokenKind.IDENTIFIER:
+        sourcePosition = state.currentSourcePosition()
+        token = state.next()
+        return state, ParseTreeLocalVariableNode(sourcePosition, token.getStringValue())
+    else: return state.advanceWithExpectedError("Local variable")
+
+def parseLocalVariables(state: ParserState) -> tuple[ParserState, list[ParseTreeNode]]:
+    # |
+    assert state.peekKind() == TokenKind.BAR
+    state.advance()
+
+    locals = []
+    while not state.atEnd() and state.peekKind() != TokenKind.BAR:
+        state, local = parseLocalVariable(state)
+        locals.append(local)
+
+    # |
+    if state.peekKind() == TokenKind.BAR:
+        state.advance()
+    else:
+        locals.append(ParseTreeErrorNode(state.currentSourcePosition(), 'Expected a bar after the local variable declarations.'))
+    return state, locals
+
 def parseArgument(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     startPosition = state.position
     assert state.peekKind() == TokenKind.COLON
@@ -280,6 +304,46 @@ def parseKeywordMessageSend(state: ParserState) -> tuple[ParserState, ParseTreeN
     selector = ParseTreeLiteralSymbolNode(firstKeywordSourcePosition.to(lastKeywordSourcePosition), symbolValue)
     return state, ParseTreeMessageSendNode(state.sourcePositionFrom(startPosition), receiver, selector, arguments)
 
+def parsePragma(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    startPosition = state.position
+    assert state.peekKind() == TokenKind.LESS_THAN
+    state.advance()
+
+    arguments = []
+    if state.peekKind() == TokenKind.IDENTIFIER:
+        selectorStartPosition = state.position
+        token = state.next()
+        selector = ParseTreeLiteralSymbolNode(state.sourcePositionFrom(selectorStartPosition), token.getStringValue())
+    elif state.peekKind() == TokenKind.KEYWORD:
+        symbolValue = ""
+        firstKeywordSourcePosition = state.peek(0).sourcePosition
+        lastKeywordSourcePosition = firstKeywordSourcePosition
+        while state.peekKind() == TokenKind.KEYWORD:
+            keywordToken = state.next()
+            lastKeywordSourcePosition = keywordToken.sourcePosition
+            symbolValue += keywordToken.getStringValue()
+            
+            state, argument = parseUnaryPostfixExpression(state)
+            arguments.append(argument)
+
+        selector = ParseTreeLiteralSymbolNode(firstKeywordSourcePosition.to(lastKeywordSourcePosition), symbolValue)
+    else:
+        return state, ParseTreeErrorNode(state.sourcePositionFrom(startPosition), 'Expected a pragma.')
+    
+    if state.peekKind() == TokenKind.GREATER_THAN:
+        state.advance()
+        return state, ParseTreePragmaNode(state.sourcePositionFrom(startPosition), selector, arguments)
+    else:
+        pragma = ParseTreePragmaNode(state.sourcePositionFrom(startPosition), selector, arguments)
+        return state, state.expectAddingErrorToNode(TokenKind.GREATER_THAN, pragma)
+
+def parsePragmas(state: ParserState) -> tuple[ParserState, list[ParseTreeNode]]:
+    pragmas = []
+    while state.peekKind() == TokenKind.LESS_THAN:
+        state, pragma = parsePragma(state)
+        pragmas.append(pragma)
+    return state, pragmas
+
 def parseCascadedMessage(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     startPosition = state.position
     token = state.peek()
@@ -376,7 +440,14 @@ def parseSequenceUntilEndOrDelimiter(state: ParserState, delimiter: TokenKind) -
 def parseLexicalSequenceUntilEndOrDelimiter(state: ParserState, delimiter: TokenKind) -> tuple[ParserState, ParseTreeNode]:
     initialPosition = state.position
     locals = []
-    pragmas = []
+    state, pragmas = parsePragmas(state)
+
+    if state.peekKind() == TokenKind.BAR:
+        state, locals = parseLocalVariables(state)
+
+    state, morePragmas = parsePragmas(state)
+    pragmas += morePragmas
+
     state, elements = parseExpressionListUntilEndOrDelimiter(state, delimiter)
     if len(locals) == 0 and len(pragmas) == 0 and len(elements) == 1:
         return state, elements[0]

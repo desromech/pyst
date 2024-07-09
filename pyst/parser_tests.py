@@ -108,6 +108,60 @@ class TestParser(unittest.TestCase):
         self.assertTrue(node.body.isIdentifierReferenceNode())
         self.assertEqual(node.body.value, 'a')
 
+    def testIdentifierPragma(self):
+        node = self.parseSourceStringWithoutErrors("<myPragma>")
+        self.assertTrue(node.isLexicalSequenceNode())
+        self.assertEqual(len(node.pragmas), 1)
+
+        pragma: ParseTreePragmaNode = node.pragmas[0]
+        self.assertTrue(pragma.selector.isLiteralSymbolNode())
+        self.assertEqual(pragma.selector.value, 'myPragma')
+
+        self.assertEqual(len(pragma.arguments), 0)
+
+    def testKeywordPragma(self):
+        node = self.parseSourceStringWithoutErrors("<myPragma: 42>")
+        self.assertTrue(node.isLexicalSequenceNode())
+        self.assertEqual(len(node.pragmas), 1)
+
+        pragma: ParseTreePragmaNode = node.pragmas[0]
+        self.assertTrue(pragma.selector.isLiteralSymbolNode())
+        self.assertEqual(pragma.selector.value, 'myPragma:')
+
+        self.assertEqual(len(pragma.arguments), 1)
+
+        argument: ParseTreeNode = pragma.arguments[0]
+        self.assertTrue(argument.isLiteralIntegerNode())
+        self.assertEqual(argument.value, 42)
+
+    def testEmptyLocals(self):
+        node = self.parseSourceStringWithoutErrors("| |")
+        self.assertTrue(node.isLexicalSequenceNode())
+        self.assertEqual(len(node.locals), 0)
+        self.assertEqual(len(node.pragmas), 0)
+
+    def testSingleLocal(self):
+        node = self.parseSourceStringWithoutErrors("| a |")
+        self.assertTrue(node.isLexicalSequenceNode())
+        self.assertEqual(len(node.locals), 1)
+        
+        local: ParseTreeLocalVariableNode = node.locals[0]
+        self.assertTrue(local.isLocalVariableNode())
+        self.assertEqual(local.name, 'a')
+
+    def testTwoLocal(self):
+        node = self.parseSourceStringWithoutErrors("| a b |")
+        self.assertTrue(node.isLexicalSequenceNode())
+        self.assertEqual(len(node.locals), 2)
+        
+        local: ParseTreeLocalVariableNode = node.locals[0]
+        self.assertTrue(local.isLocalVariableNode())
+        self.assertEqual(local.name, 'a')
+
+        local: ParseTreeLocalVariableNode = node.locals[1]
+        self.assertTrue(local.isLocalVariableNode())
+        self.assertEqual(local.name, 'b')
+
     def testLiteralInteger(self):
         node = self.parseSourceStringWithoutErrors('42')
         self.assertTrue(node.isLiteralIntegerNode())
