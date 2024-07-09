@@ -6,12 +6,13 @@ import os.path
 TokenKind = Enum('TokenKind', [
     'END_OF_SOURCE', 'ERROR',
 
-    'CHARACTER', 'FLOAT', 'IDENTIFIER', 'NAT', 'KEYWORD', 'MULTI_KEYWORD', 'OPERATOR', 'STRING', 'SYMBOL',
+    'CHARACTER', 'FLOAT', 'IDENTIFIER', 'INTEGER', 'KEYWORD', 'MULTI_KEYWORD', 'OPERATOR', 'STRING', 'SYMBOL',
     'LEFT_PARENT', 'RIGHT_PARENT', 'LEFT_BRACKET', 'RIGHT_BRACKET', 'LEFT_CURLY_BRACKET', 'RIGHT_CURLY_BRACKET',
     'LESS_THAN', 'GREATER_THAN',
     'COLON', 'COLON_COLON', 'BAR',
     'ASSIGNMENT', 'SEMICOLON', 'COMMA', 'DOT',
-    'LITERAL_ARRAY_START'
+    'QUOTE', 'QUASI_QUOTE', 'QUASI_UNQUOTE', 'SPLICE',
+    'LITERAL_ARRAY_START', 'BYTE_ARRAY_START'
 ])
 
 class Token:
@@ -170,7 +171,7 @@ def scanNextToken(state: ScannerState) -> tuple[ScannerState, Token]:
         return state, state.makeTokenStartingFrom(TokenKind.IDENTIFIER, initialState)
     
     ## Numbers
-    if isDigit(c):
+    if isDigit(c) or ((state.peek() == b'+'[0] or state.peek() == b'-'[0]) and isDigit(state.peek(1))):
         state.advance()
         while isDigit(state.peek()):
             state.advance()
@@ -180,7 +181,7 @@ def scanNextToken(state: ScannerState) -> tuple[ScannerState, Token]:
             state.advance()
             while isIdentifierMiddle(state.peek()):
                 state.advance()
-            return state, state.makeTokenStartingFrom(TokenKind.NAT, initialState)
+            return state, state.makeTokenStartingFrom(TokenKind.INTEGER, initialState)
         
         ## Decimal point.
         if state.peek() == b'.'[0] and isDigit(state.peek(1)):
@@ -188,9 +189,15 @@ def scanNextToken(state: ScannerState) -> tuple[ScannerState, Token]:
             while isDigit(state.peek()):
                 state.advance()
 
+            if (state.peek() == b'e'[0] or state.peek() == b'E'[0]):
+                if isDigit(state.peek(1)) or ((state.peek(1) == b'+'[0] or state.peek(1) == b'-'[0]) and isDigit(state.peek(2))):
+                    state.advanceCount(2)
+                    while isDigit(state.peek()):
+                        state.advance()
+
             return state, state.makeTokenStartingFrom(TokenKind.FLOAT, initialState)
         
-        return state, state.makeTokenStartingFrom(TokenKind.NAT, initialState)
+        return state, state.makeTokenStartingFrom(TokenKind.INTEGER, initialState)
 
     ## Symbols
     if c == b'#'[0]:
@@ -214,7 +221,28 @@ def scanNextToken(state: ScannerState) -> tuple[ScannerState, Token]:
                     return state, state.makeTokenStartingFrom(TokenKind.SYMBOL, initialState)
             
             return state, state.makeTokenStartingFrom(TokenKind.SYMBOL, initialState)
-        
+
+        elif c1 == b"'"[0]:
+            state.advanceCount(2)
+            while not state.atEnd() and (state.peek() != b"'"[0] or (state.peek() == b"'"[0] and state.peek(1) == b"'"[0])):
+                if state.peek() == b"'"[0] and state.peek(1) == b"'"[0]:
+                    state.advanceCount(2)
+                else:
+                    state.advance()
+
+            if state.peek() != b"'"[0]:
+                return state, state.makeErrorTokenStartingFrom("Incomplete symbol string literal.", initialState)
+            state.advance()
+
+            return state, state.makeTokenStartingFrom(TokenKind.SYMBOL, initialState)
+        elif isOperatorCharacter(c1):
+            state.advanceCount(2)
+            while isOperatorCharacter(state.peek()):
+                state.advance()
+            return state, state.makeTokenStartingFrom(TokenKind.SYMBOL, initialState)
+        elif c1 == b'['[0]:
+            state.advanceCount(2)
+            return state, state.makeTokenStartingFrom(TokenKind.BYTE_ARRAY_START, initialState)
         elif c1 == b'('[0]:
             state.advanceCount(2)
             return state, state.makeTokenStartingFrom(TokenKind.LITERAL_ARRAY_START, initialState)
@@ -264,9 +292,6 @@ def scanNextToken(state: ScannerState) -> tuple[ScannerState, Token]:
     elif c == b';'[0]:
         state.advance()
         return state, state.makeTokenStartingFrom(TokenKind.SEMICOLON, initialState)
-    elif c == b','[0]:
-        state.advance()
-        return state, state.makeTokenStartingFrom(TokenKind.COMMA, initialState)
     elif c == b'.'[0]:
         state.advance()
         return state, state.makeTokenStartingFrom(TokenKind.DOT, initialState)
@@ -278,16 +303,16 @@ def scanNextToken(state: ScannerState) -> tuple[ScannerState, Token]:
         return state, state.makeTokenStartingFrom(TokenKind.COLON, initialState)
     elif c == b'`'[0]:
         if state.peek(1) == b'\''[0]:
-            state.advance()
+            state.advanceCount(2)
             return state, state.makeTokenStartingFrom(TokenKind.QUOTE, initialState)
         elif state.peek(1) == b'`'[0]:
-            state.advance()
+            state.advanceCount(2)
             return state, state.makeTokenStartingFrom(TokenKind.QUASI_QUOTE, initialState)
         elif state.peek(1) == b','[0]:
-            state.advance()
+            state.advanceCount(2)
             return state, state.makeTokenStartingFrom(TokenKind.QUASI_UNQUOTE, initialState)
         elif state.peek(1) == b'@'[0]:
-            state.advance()
+            state.advanceCount(2)
             return state, state.makeTokenStartingFrom(TokenKind.SPLICE, initialState)
     elif c == b'|'[0]:
         state.advance()
