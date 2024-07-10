@@ -83,6 +83,10 @@ class ParseTreeVisitor(ABC):
         pass
 
     @abstractmethod
+    def visitArrayNode(self, node):
+        pass
+
+    @abstractmethod
     def visitAssignmentNode(self, node):
         pass
 
@@ -104,6 +108,10 @@ class ParseTreeVisitor(ABC):
 
     @abstractmethod
     def visitLexicalSequenceNode(self, node):
+        pass
+
+    @abstractmethod
+    def visitLiteralArrayNode(self, node):
         pass
 
     @abstractmethod
@@ -185,6 +193,9 @@ class ParseTreeNode(ABC):
         return False
 
     def isLiteralNode(self) -> bool:
+        return False
+
+    def isLiteralArrayNode(self) -> bool:
         return False
 
     def isLiteralCharacterNode(self) -> bool:
@@ -357,6 +368,17 @@ class ParseTreeLexicalSequenceNode(ParseTreeNode):
     def isLexicalSequenceNode(self) -> bool:
         return True
     
+class ParseTreeLiteralArrayNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, elements: list[ParseTreeNode]) -> None:
+        super().__init__(sourcePosition)
+        self.elements = elements
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitLiteralArrayNode(self)
+
+    def isLiteralArrayNode(self) -> bool:
+        return True
+
 class ParseTreeLiteralNode(ParseTreeNode):
     def isLiteralNode(self) -> bool:
         return True
@@ -514,6 +536,9 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
 
     def visitLiteralNode(self, node: ParseTreeLiteralNode):
         pass
+
+    def visitLiteralArrayNode(self, node: ParseTreeLiteralArrayNode):
+        self.visitNodes(node.elements)
 
     def visitLiteralCharacterNode(self, node: ParseTreeLiteralCharacterNode):
         self.visitLiteralNode(node)

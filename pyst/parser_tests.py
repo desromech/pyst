@@ -189,6 +189,59 @@ class TestParser(unittest.TestCase):
         self.assertTrue(local.isLocalVariableNode())
         self.assertEqual(local.name, 'b')
 
+    def testLiteralArray(self):
+        node = self.parseSourceStringWithoutErrors("#()")
+        self.assertTrue(node.isLiteralArrayNode())
+        self.assertEqual(len(node.elements), 0)
+
+    def testLiteralArray1(self):
+        node = self.parseSourceStringWithoutErrors("#(42)")
+        self.assertTrue(node.isLiteralArrayNode())
+        self.assertEqual(len(node.elements), 1)
+
+        element: ParseTreeLiteralIntegerNode = node.elements[0]
+        self.assertTrue(element.isLiteralIntegerNode())
+        self.assertEqual(element.value, 42)
+
+    def testLiteralArray2(self):
+        node = self.parseSourceStringWithoutErrors("#(42 5)")
+        self.assertTrue(node.isLiteralArrayNode())
+        self.assertEqual(len(node.elements), 2)
+
+        element: ParseTreeLiteralIntegerNode = node.elements[0]
+        self.assertTrue(element.isLiteralIntegerNode())
+        self.assertEqual(element.value, 42)
+
+        element: ParseTreeLiteralIntegerNode = node.elements[1]
+        self.assertTrue(element.isLiteralIntegerNode())
+        self.assertEqual(element.value, 5)
+
+    def testLiteralArrayIdentifierSymbol(self):
+        node = self.parseSourceStringWithoutErrors("#(void)")
+        self.assertTrue(node.isLiteralArrayNode())
+        self.assertEqual(len(node.elements), 1)
+
+        element: ParseTreeLiteralIntegerNode = node.elements[0]
+        self.assertTrue(element.isLiteralSymbolNode())
+        self.assertEqual(element.value, 'void')
+
+    def testLiteralArrayIdentifiers(self):
+        node = self.parseSourceStringWithoutErrors("#(nil false true)")
+        self.assertTrue(node.isLiteralArrayNode())
+        self.assertEqual(len(node.elements), 3)
+
+        element: ParseTreeLiteralIntegerNode = node.elements[0]
+        self.assertTrue(element.isIdentifierReferenceNode())
+        self.assertEqual(element.value, 'nil')
+
+        element: ParseTreeLiteralIntegerNode = node.elements[1]
+        self.assertTrue(element.isIdentifierReferenceNode())
+        self.assertEqual(element.value, 'false')
+
+        element: ParseTreeLiteralIntegerNode = node.elements[2]
+        self.assertTrue(element.isIdentifierReferenceNode())
+        self.assertEqual(element.value, 'true')
+
     def testLiteralInteger(self):
         node = self.parseSourceStringWithoutErrors('42')
         self.assertTrue(node.isLiteralIntegerNode())

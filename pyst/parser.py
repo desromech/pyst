@@ -144,12 +144,41 @@ def parseIdentifier(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     assert token.kind == TokenKind.IDENTIFIER
     return state, ParseTreeIdentifierReferenceNode(token.sourcePosition, token.getStringValue())
 
+def parseLiteralArrayIdentifier(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    token = state.next()
+    assert token.kind == TokenKind.IDENTIFIER
+    tokenValue = token.getStringValue()
+    if tokenValue in ['nil', 'false', 'true']:
+        return state, ParseTreeIdentifierReferenceNode(token.sourcePosition, tokenValue)
+    else:
+        return state, ParseTreeLiteralSymbolNode(token.sourcePosition, tokenValue)
+
+def parseTokenAsSymbol(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    token = state.next()
+    return state, ParseTreeLiteralSymbolNode(token.sourcePosition, token.getStringValue())
+
 def parseTerm(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     if state.peekKind() == TokenKind.IDENTIFIER: return parseIdentifier(state)
     elif state.peekKind() == TokenKind.LEFT_PARENT: return parseParenthesis(state)
     elif state.peekKind() == TokenKind.LEFT_BRACKET: return parseBlock(state)
     elif state.peekKind() == TokenKind.LEFT_CURLY_BRACKET: return parseArray(state)
+    elif state.peekKind() == TokenKind.LITERAL_ARRAY_START: return parseLiteralArray(state)
     elif state.peekKind() == TokenKind.CARET: return parseReturn(state)
+    else: return parseLiteral(state)
+
+def parseLiteralArrayElement(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    if state.peekKind() == TokenKind.IDENTIFIER: return parseLiteralArrayIdentifier(state)
+    elif state.peekKind() == TokenKind.LEFT_PARENT: return parseLiteralArray(state)
+    elif state.peekKind() == TokenKind.LITERAL_ARRAY_START: return parseLiteralArray(state)
+    elif state.peekKind() in [
+        TokenKind.LEFT_BRACKET, TokenKind.RIGHT_BRACKET,
+        TokenKind.LEFT_CURLY_BRACKET, TokenKind.RIGHT_CURLY_BRACKET,
+        TokenKind.LESS_THAN, TokenKind.GREATER_THAN, 
+        TokenKind.COLON, TokenKind.BAR,
+        TokenKind.CARET, 
+        TokenKind.ASSIGNMENT, TokenKind.SEMICOLON, TokenKind.DOT, TokenKind.COMMA,
+        TokenKind.QUOTE, TokenKind.QUASI_QUOTE, TokenKind.QUASI_UNQUOTE, TokenKind.SPLICE,
+    ]: return parseTokenAsSymbol(state)
     else: return parseLiteral(state)
 
 def parseParenthesis(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
@@ -184,6 +213,25 @@ def parseArray(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
         elements.append(ParseTreeErrorNode(state.currentSourcePosition(), "Expected right parenthesis."))
 
     return state, ParseTreeArrayNode(state.sourcePositionFrom(startPosition), elements)
+
+def parseLiteralArray(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    # #( | ()
+    startPosition = state.position
+    assert state.peekKind() == TokenKind.LITERAL_ARRAY_START or state.peekKind() == TokenKind.LEFT_PARENT
+    state.advance()
+
+    elements = []
+    while not state.atEnd() and state.peekKind() != TokenKind.RIGHT_PARENT:
+        state, element = parseLiteralArrayElement(state)
+        elements.append(element)
+
+    # )
+    if state.peekKind() == TokenKind.RIGHT_PARENT:
+        state.advance()
+    else:
+        elements.append(ParseTreeErrorNode(state.currentSourcePosition(), "Expected right parenthesis."))
+
+    return state, ParseTreeLiteralArrayNode(state.sourcePositionFrom(startPosition), elements)
 
 def parseReturn(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     # ^

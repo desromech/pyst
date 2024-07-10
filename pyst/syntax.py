@@ -45,6 +45,9 @@ class ASGSyntaxLocalVariableNode(ASGSyntaxNode):
 class ASGSyntaxLiteralNode(ASGSyntaxNode):
     pass
 
+class ASGSyntaxLiteralArrayNode(ASGSyntaxNode):
+    elements = ASGNodeDataInputPorts()
+
 class ASGSyntaxLiteralCharacterNode(ASGSyntaxLiteralNode):
     value = ASGNodeDataAttribute(int)
 
@@ -127,6 +130,9 @@ class ASGParseTreeFrontEnd(ParseTreeVisitor):
 
     def visitLocalVariableNode(self, node: ParseTreeLocalVariableNode):
         return ASGSyntaxLocalVariableNode(ASGNodeSourceCodeDerivation(node.sourcePosition), node.name)
+
+    def visitLiteralArrayNode(self, node: ParseTreeArrayNode):
+        return ASGSyntaxLiteralArrayNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.transformNodes(node.elements))
 
     def visitLiteralCharacterNode(self, node: ParseTreeLiteralCharacterNode):
         return ASGSyntaxLiteralCharacterNode(ASGNodeSourceCodeDerivation(node.sourcePosition), node.value)

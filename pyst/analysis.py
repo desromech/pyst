@@ -183,6 +183,11 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
         exitPoint = self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGSequenceReturnNode, scriptResult, predecessor = self.builder.currentPredecessor)
         return self.builder.forSyntaxExpansionBuild(self, node, ASGTopLevelScriptNode, entryPoint, exitPoint = exitPoint)
 
+    @asgPatternMatchingOnNodeKind(ASGSyntaxLiteralArrayNode)
+    def expandSyntaxLiteralArrayNode(self, node: ASGSyntaxLiteralArrayNode) -> ASGAnalyzedNode:
+        elements = list(map(self, node.elements))
+        return self.builder.forSyntaxExpansionBuild(self, node, ASGArrayNode, elements)
+
     @asgPatternMatchingOnNodeKind(ASGSyntaxLiteralIntegerNode)
     def expandSyntaxLiteralIntegerNode(self, node: ASGSyntaxLiteralIntegerNode) -> ASGAnalyzedNode:
         return self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGLiteralIntegerNode, node.value)
