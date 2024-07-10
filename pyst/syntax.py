@@ -102,7 +102,7 @@ class ASGParseTreeFrontEnd(ParseTreeVisitor):
         return ASGSyntaxApplicationNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.visitNode(node.functional), self.transformNodes(node.arguments))
 
     def visitArrayNode(self, node: ParseTreeArrayNode):
-        return ASGSyntaxSequenceNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.transformNodes(node.elements))
+        return ASGSyntaxArrayNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.transformNodes(node.elements))
 
     def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
         return ASGSyntaxAssignmentNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.visitNode(node.store), self.visitNode(node.value))

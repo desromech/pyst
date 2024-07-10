@@ -114,9 +114,6 @@ class ASGLiteralNode(ASGAnalyzedDataExpressionNode):
     def isConstantDataNode(self) -> bool:
         return True
     
-class ASGLiteralBooleanNode(ASGLiteralNode):
-    value = ASGNodeDataAttribute(bool)
-
 class ASGLiteralCharacterNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(int)
 
@@ -135,7 +132,16 @@ class ASGLiteralSymbolNode(ASGLiteralNode):
 class ASGLiteralStringNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(str)
 
+class ASGLiteralObjectNode(ASGLiteralNode):
+    value = ASGNodeDataAttribute(object)
+
 class ASGLiteralNilNode(ASGLiteralNode):
+    pass
+
+class ASGLiteralFalseNode(ASGLiteralNode):
+    pass
+
+class ASGLiteralTrueNode(ASGLiteralNode):
     pass
 
 class ASGLiteralPrimitiveFunctionNode(ASGLiteralNode):

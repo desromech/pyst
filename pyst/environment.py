@@ -2,6 +2,9 @@ from .mop import *
 from .syntax import *
 from .asg import *
 
+class Stdio:
+    pass
+
 class ASGEnvironment(ABC):
     @abstractmethod
     def getTopLevelTargetEnvironment(self):
@@ -37,8 +40,10 @@ class ASGTopLevelTargetEnvironment(ASGEnvironment):
         topLevelDerivation = ASGNodeNoDerivation.getSingleton()
         self.topLevelUnificationTable = {}
         self.addSymbolValue('nil', ASGLiteralNilNode(topLevelDerivation))
-        self.addSymbolValue('false', ASGLiteralBooleanNode(topLevelDerivation, False))
-        self.addSymbolValue('true', ASGLiteralBooleanNode(topLevelDerivation, True))
+        self.addSymbolValue('false', ASGLiteralFalseNode(topLevelDerivation))
+        self.addSymbolValue('true', ASGLiteralTrueNode(topLevelDerivation))
+
+        self.addSymbolValue('Stdio', ASGLiteralObjectNode(topLevelDerivation, Stdio))
 
         self.addPrimitiveFunctions()
         self.gcmCache = {}
@@ -73,7 +78,11 @@ class ASGTopLevelTargetEnvironment(ASGEnvironment):
         return self.symbolTable.get(symbol, [])
 
     def lookSymbolBindingRecursively(self, symbol: str):
-        return self.symbolTable.get(symbol, None)
+        result = self.symbolTable.get(symbol, None)
+        if result is not None:
+            return result[0]
+        else:
+            return None
 
     @classmethod
     def uniqueInstance(cls):
@@ -124,7 +133,7 @@ class ASGChildEnvironmentWithBindings(ASGChildEnvironment):
 
     def lookSymbolBindingRecursively(self, symbol: str):
         if symbol in self.symbolTable:
-            return self.symbolTable[symbol]
+            return self.symbolTable[symbol][0]
         return self.parent.lookSymbolBindingRecursively(symbol)
 
 class ASGLexicalEnvironment(ASGChildEnvironment):

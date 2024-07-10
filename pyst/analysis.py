@@ -156,6 +156,11 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
     def expandSyntaxErrorNode(self, node: ASGSyntaxErrorNode) -> ASGAnalyzedNode:
         return self.makeErrorAtNode(node.message, node)
 
+    @asgPatternMatchingOnNodeKind(ASGSyntaxArrayNode)
+    def expandSyntaxArrayNode(self, node: ASGSyntaxArrayNode) -> ASGAnalyzedNode:
+        elements = list(map(self, node.elements))
+        return self.builder.forSyntaxExpansionBuild(self, node, ASGArrayNode, elements)
+
     @asgPatternMatchingOnNodeKind(ASGSyntaxBinaryExpressionSequenceNode)
     def expandSyntaxBinaryExpressionSequenceNode(self, node: ASGSyntaxBinaryExpressionSequenceNode) -> ASGAnalyzedNode:
         elementCount = len(node.elements)
