@@ -10,6 +10,7 @@ class ASGNodeWithInterpretableInstructions:
         self.startpc = constantCount + activationParameterCount
         self.activationContextSize = len(self.instructions) - self.constantCount
         self.parametersLists = None
+        self.constants = []
         self.buildParametersLists()
 
     def buildParametersLists(self):
@@ -17,6 +18,9 @@ class ASGNodeWithInterpretableInstructions:
         instructionIndexTable = {}
         for i in range(len(self.instructions)):
             instructionIndexTable[self.instructions[i]] = i - self.constantCount
+        for i in range(self.constantCount):
+            constantInstruction = self.instructions[i]
+            self.constants.append(constantInstruction.evaluateAsConstantValue())
         for i in range(self.constantCount, len(self.instructions)):
             instruction = self.instructions[i]
             parameterList = tuple(map(lambda dep: instructionIndexTable[dep], instruction.interpretationDependencies()))
@@ -39,6 +43,9 @@ class ASGNodeWithInterpretableInstructions:
                             result += ', '
                         result += str(parameters[i])
                     result += ')'
+            else:
+                result += ' := '
+                result += repr(self.constants[i])
 
             result += '\n'
 
@@ -100,6 +107,6 @@ class ASGNodeInterpreterActivationContext:
 
     def __getitem__(self, index: int):
         if index < 0:
-            return self.instructions.instructions[self.instructions.constantCount + index]
+            return self.instructions.constants[self.instructions.constantCount + index]
         else:
             return self.data[index]

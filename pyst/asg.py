@@ -127,11 +127,20 @@ class ASGLiteralNode(ASGAnalyzedDataExpressionNode):
 class ASGLiteralCharacterNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(int)
 
+    def evaluateAsConstantValue(self):
+        return self.value
+
 class ASGLiteralIntegerNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(int)
 
+    def evaluateAsConstantValue(self):
+        return self.value
+
 class ASGLiteralFloatNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(float)
+
+    def evaluateAsConstantValue(self):
+        return self.value
 
 class ASGLiteralSymbolNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(str)
@@ -139,24 +148,37 @@ class ASGLiteralSymbolNode(ASGLiteralNode):
     def isLiteralSymbolNode(self) -> bool:
         return True
 
+    def evaluateAsConstantValue(self):
+        return self.value
+
 class ASGLiteralStringNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(str)
+
+    def evaluateAsConstantValue(self):
+        return self.value
 
 class ASGLiteralObjectNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(object)
 
+    def evaluateAsConstantValue(self):
+        return self.value
+
 class ASGLiteralNilNode(ASGLiteralNode):
-    pass
+    def evaluateAsConstantValue(self):
+        return None
 
 class ASGLiteralFalseNode(ASGLiteralNode):
-    pass
+    def evaluateAsConstantValue(self):
+        return False
 
 class ASGLiteralTrueNode(ASGLiteralNode):
-    pass
+    def evaluateAsConstantValue(self):
+        return True
 
 class ASGLiteralPrimitiveFunctionNode(ASGLiteralNode):
     name = ASGNodeDataAttribute(str)
     compileTimeImplementation = ASGNodeDataAttribute(object, default = None, notCompared = True, notPrinted = True)
+    runtimeImplementation = ASGNodeDataAttribute(object, default = None, notCompared = True, notPrinted = True)
 
     pure = ASGNodeDataAttribute(bool, default = False)
     compileTime = ASGNodeDataAttribute(bool, default = False)
@@ -174,6 +196,9 @@ class ASGLiteralPrimitiveFunctionNode(ASGLiteralNode):
     def reduceApplicationWithAlgorithm(self, node, algorithm):
         arguments = list(map(algorithm, node.arguments))
         return self.compileTimeImplementation(ASGNodeReductionDerivation(algorithm, node), node.type, *arguments)
+
+    def evaluateAsConstantValue(self):
+        return self.runtimeImplementation
 
 class ASGBetaReplaceableNode(ASGAnalyzedDataExpressionNode):
     def isBetaReplaceableNode(self) -> bool:
@@ -200,6 +225,20 @@ class ASGCapturedValueNode(ASGBetaReplaceableNode):
 class ASGArrayNode(ASGAnalyzedDataExpressionNode):
     elements = ASGNodeDataInputPorts()
 
+    def __init__(self, *positionalArguments, **kwArguments) -> None:
+        super().__init__(*positionalArguments, **kwArguments)
+        self.hasEvaluatedConstantValue = False
+        self.constantEvaluationResult: tuple = None
+
+    def isConstantDataNode(self) -> bool:
+        return True
+
+    def evaluateAsConstantValue(self):
+        if not self.hasEvaluatedConstantValue:
+            self.constantEvaluationResult = tuple(map(lambda e: e.evaluateAsConstantValue(), self.elements))
+            self.hasEvaluatedConstantValue = True
+        return self.constantEvaluationResult
+
 class ASGBlockNode(ASGAnalyzedDataExpressionNode):
     arguments = ASGNodeDataInputPorts(notInterpreted = True)
     entryPoint = ASGSequencingDestinationPort(notInterpreted = True)
@@ -210,7 +249,7 @@ class ASGBlockNode(ASGAnalyzedDataExpressionNode):
         return ()
 
     def isConstantDataNode(self) -> bool:
-        return self.type.isConstantDataNode()
+        return True
 
     def isBlock(self) -> bool:
         return True
