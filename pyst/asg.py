@@ -283,6 +283,12 @@ class ASGFxMessageSendNode(ASGSequencingAndDataNode):
     selector = ASGNodeDataInputPort()
     arguments = ASGNodeDataInputPorts()
 
+    def interpretInContext(self, context, parameters):
+        receiver = context[parameters[0]]
+        selector = context[parameters[1]]
+        arguments = list(map(lambda x: context[x], parameters[2:]))
+        return performInWithArguments(receiver, selector, arguments)
+
 class ASGMutableArrayNode(ASGAnalyzedStatefullExpressionNode):
     elements = ASGNodeDataInputPorts()
 

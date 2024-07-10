@@ -1100,3 +1100,19 @@ def asgPredecessorTopo(startingNode):
     topoSort = []
     asgPredecessorTopoSortDo(startingNode, topoSort.append)
     return topoSort
+
+class Message:
+    def __init__(self, selector: str, arguments):
+        self.selector = selector
+        self.arguments = arguments
+
+def performInWithArguments(receiver, selector: str, arguments):
+    if hasattr(receiver, selector):
+        receiverMethod = getattr(receiver, selector)
+        return receiverMethod(receiver, *arguments)
+
+    if selector != 'doesNotUnderstand:':
+        return performInWithArguments(receiver, 'doesNotUnderstand:', (Message(selector, arguments),))
+    
+    assert len(arguments) == 1
+    assert False
