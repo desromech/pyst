@@ -91,6 +91,9 @@ class ASGAnalyzedDataExpressionNode(ASGAnalyzedNode):
 class ASGAnalyzedStatefullExpressionNode(ASGAnalyzedNode):
     def isPureDataNode(self) -> bool:
         return False
+    
+    def isStatefullDataNode(self) -> bool:
+        return True
 
 class ASGSequencingAndDataNode(ASGAnalyzedNode):
     predecessor = ASGSequencingPredecessorAttribute()
@@ -104,6 +107,9 @@ class ASGSequencingAndDataNode(ASGAnalyzedNode):
     def directImmediateDominator(self):
         return self.predecessor
 
+    def getRegionOfUsedValue(self, usedValue):
+        return self.predecessor
+    
 class ASGErrorNode(ASGAnalyzedDataExpressionNode):
     message = ASGNodeDataAttribute(str)
     innerNodes = ASGNodeDataInputPorts()

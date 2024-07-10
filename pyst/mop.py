@@ -569,7 +569,16 @@ class ASGNode(metaclass = ASGNodeMetaclass):
 
     def isPureDataNode(self) -> bool:
         raise Exception("Subclass responsibility isPureDataNode")
-    
+
+    def isStatefullDataNode(self) -> bool:
+        return False
+
+    def isPhiNode(self) -> bool:
+        return False
+
+    def isPhiValueNode(self) -> bool:
+        return False
+
     def isSyntaxNode(self) -> bool:
         return False
 

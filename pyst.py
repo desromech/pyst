@@ -89,13 +89,13 @@ class FrontEndDriver:
                 success = False
         return success
 
-    def evaluateAnalyzedSource(self, typecheckedSource):
-        #from pyst.gcm import topLevelScriptGCM
-        #gcm = topLevelScriptGCM(typecheckedSource)
-        #interpretableScript = gcm.asInterpretableInstructions()
-        #scriptResult = interpretableScript.evaluateInModuleWithArguments(self.module)
-        #return scriptResult
-        return None
+    def evaluateAnalyzedSource(self, analyzedSource):
+        from pyst.gcm import topLevelScriptGCM
+        gcm = topLevelScriptGCM(analyzedSource)
+        interpretableScript = gcm.asInterpretableInstructions()
+        interpretableScript.dumpDotToFileNamed('toplevelGCM.dot')
+        scriptResult = interpretableScript.evaluateWithArguments()
+        return scriptResult
 
     def evaluateAnalyzedSources(self):
         for analyzedSource in self.analyzedSources:
