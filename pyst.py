@@ -62,9 +62,9 @@ class FrontEndDriver:
         from pyst.parser import parseFileNamed
         from pyst.parsetree import ParseTreeErrorVisitor
         from pyst.syntax import ASGParseTreeFrontEnd
-        #from pyst.analysis import expandAndAnalyze
+        from pyst.analysis import expandAndAnalyze
         from pyst.visualizations import asgToDotFileNamed, asgWithDerivationsToDotFileNamed
-        #from pyst.environment import makeScriptAnalysisEnvironment
+        from pyst.environment import makeScriptAnalysisEnvironment
         from pyst.mop import asgPredecessorTopoSortDo
 
         parseTree = parseFileNamed(sourceFile)
@@ -74,14 +74,13 @@ class FrontEndDriver:
         asgSyntax = ASGParseTreeFrontEnd().visitNode(parseTree)
         asgToDotFileNamed(asgSyntax, 'asgSyntax.dot')
 
-        #asgAnalyzed, asgTypecheckingErrors = expandAndTypecheck(makeScriptAnalysisEnvironment(self.compilationTarget, self.module, asgSyntax.sourceDerivation.getSourcePosition(), sourceFile), asgSyntax)
-        #asgToDotFileNamed(asgAnalyzed, 'asgAnalyzed.dot')
-        #asgWithDerivationsToDotFileNamed(asgAnalyzed, 'asgAnalyzedWithDerivation.dot')
-        #for error in asgTypecheckingErrors:
-        #    sys.stderr.write('%s\n' % error.prettyPrintError())
-        #self.analyzedSources.append(asgAnalyzed)
-        #return len(asgAnalysisErrors) == 0
-        return True
+        asgAnalyzed, asgAnalysisErrors = expandAndAnalyze(makeScriptAnalysisEnvironment(asgSyntax.sourceDerivation.getSourcePosition(), sourceFile), asgSyntax)
+        asgToDotFileNamed(asgAnalyzed, 'asgAnalyzed.dot')
+        asgWithDerivationsToDotFileNamed(asgAnalyzed, 'asgAnalyzedWithDerivation.dot')
+        for error in asgAnalysisErrors:
+            sys.stderr.write('%s\n' % error.prettyPrintError())
+        self.analyzedSources.append(asgAnalyzed)
+        return len(asgAnalysisErrors) == 0
 
     def parseAndAnalyzeSourceFiles(self):
         success = True
