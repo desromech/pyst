@@ -160,6 +160,9 @@ class ParseTreeNode(ABC):
     def isArgumentNode(self) -> bool:
         return False
 
+    def isArrayNode(self) -> bool:
+        return False
+
     def isAssignmentNode(self) -> bool:
         return False
 
@@ -211,6 +214,9 @@ class ParseTreeNode(ABC):
     def isPragmaNode(self) -> bool:
         return False
 
+    def isReturnNode(self) -> bool:
+        return False
+
     def isSequenceNode(self) -> bool:
         return False
 
@@ -247,6 +253,17 @@ class ParseTreeArgumentNode(ParseTreeNode):
         return visitor.visitArgumentNode(self)
 
     def isArgumentNode(self) -> bool:
+        return True
+
+class ParseTreeArrayNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, elements: list[ParseTreeNode]) -> None:
+        super().__init__(sourcePosition)
+        self.elements = elements
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitArrayNode(self)
+
+    def isArrayNode(self) -> bool:
         return True
 
 class ParseTreeAssignmentNode(ParseTreeNode):
@@ -438,6 +455,17 @@ class ParseTreeMessageSendNode(ParseTreeNode):
     def isMessageSendNode(self) -> bool:
         return True
 
+class ParseTreeReturnNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, expression: ParseTreeNode) -> None:
+        super().__init__(sourcePosition)
+        self.expression = expression
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitReturnNode(self)
+
+    def isReturnNode(self) -> bool:
+        return True
+
 class ParseTreeSequenceNode(ParseTreeNode):
     def __init__(self, sourcePosition: SourcePosition, elements: list[ParseTreeNode]) -> None:
         super().__init__(sourcePosition)
@@ -459,6 +487,9 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
 
     def visitArgumentNode(self, node: ParseTreeArgumentNode):
         pass
+
+    def visitArrayNode(self, node: ParseTreeArrayNode):
+        self.visitNodes(node.elements)
 
     def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
         self.visitNode(node.variable)
@@ -514,6 +545,9 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
     def visitPragmaNode(self, node: ParseTreePragmaNode):
         self.visitNode(node.selector)
         self.visitNodes(node.arguments)
+
+    def visitReturnNode(self, node: ParseTreeReturnNode):
+        self.visitNode(node.expression)
 
     def visitSequenceNode(self, node: ParseTreeSequenceNode):
         self.visitNodes(node.elements)

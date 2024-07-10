@@ -49,6 +49,33 @@ class TestParser(unittest.TestCase):
         self.assertTrue(argument.isLiteralIntegerNode())
         self.assertEqual(argument.value, 5)
 
+    def testArray(self):
+        node = self.parseSourceStringWithoutErrors("{}")
+        self.assertTrue(node.isArrayNode())
+        self.assertEqual(len(node.elements), 0)
+
+    def testArray1(self):
+        node = self.parseSourceStringWithoutErrors("{42}")
+        self.assertTrue(node.isArrayNode())
+        self.assertEqual(len(node.elements), 1)
+
+        element: ParseTreeLiteralIntegerNode = node.elements[0]
+        self.assertTrue(element.isLiteralIntegerNode())
+        self.assertEqual(element.value, 42)
+
+    def testArray2(self):
+        node = self.parseSourceStringWithoutErrors("{42 . 5}")
+        self.assertTrue(node.isArrayNode())
+        self.assertEqual(len(node.elements), 2)
+
+        element: ParseTreeLiteralIntegerNode = node.elements[0]
+        self.assertTrue(element.isLiteralIntegerNode())
+        self.assertEqual(element.value, 42)
+
+        element: ParseTreeLiteralIntegerNode = node.elements[1]
+        self.assertTrue(element.isLiteralIntegerNode())
+        self.assertEqual(element.value, 5)
+
     def testAssignment(self):
         node = self.parseSourceStringWithoutErrors("a := 42")
         self.assertTrue(node.isAssignmentNode())
@@ -342,6 +369,12 @@ class TestParser(unittest.TestCase):
         self.assertTrue(message.selector.isLiteralSymbolNode())
         self.assertEqual(message.selector.value, 'yourself')
         self.assertEqual(len(message.arguments), 0)
+
+    def testReturn(self):
+        node = self.parseSourceStringWithoutErrors("^ 42")
+        self.assertTrue(node.isReturnNode())
+        self.assertTrue(node.expression.isLiteralIntegerNode())
+        self.assertEqual(node.expression.value, 42)
 
 if __name__ == '__main__':
     unittest.main()

@@ -20,6 +20,9 @@ class ASGSyntaxErrorNode(ASGSyntaxNode):
 class ASGSyntaxArgumentNode(ASGSyntaxNode):
     name = ASGNodeDataAttribute(str)
 
+class ASGSyntaxArrayNode(ASGSyntaxNode):
+    elements = ASGNodeDataInputPorts()
+
 class ASGSyntaxBlockNode(ASGSyntaxNode):
     arguments = ASGNodeDataInputPorts()
     body = ASGNodeDataInputPort()
@@ -94,6 +97,9 @@ class ASGParseTreeFrontEnd(ParseTreeVisitor):
 
     def visitApplicationNode(self, node: ParseTreeApplicationNode):
         return ASGSyntaxApplicationNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.visitNode(node.functional), self.transformNodes(node.arguments))
+
+    def visitArrayNode(self, node: ParseTreeArrayNode):
+        return ASGSyntaxSequenceNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.transformNodes(node.elements))
 
     def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
         return ASGSyntaxAssignmentNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.visitNode(node.store), self.visitNode(node.value))

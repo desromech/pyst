@@ -148,6 +148,8 @@ def parseTerm(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     if state.peekKind() == TokenKind.IDENTIFIER: return parseIdentifier(state)
     elif state.peekKind() == TokenKind.LEFT_PARENT: return parseParenthesis(state)
     elif state.peekKind() == TokenKind.LEFT_BRACKET: return parseBlock(state)
+    elif state.peekKind() == TokenKind.LEFT_CURLY_BRACKET: return parseArray(state)
+    elif state.peekKind() == TokenKind.CARET: return parseReturn(state)
     else: return parseLiteral(state)
 
 def parseParenthesis(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
@@ -166,6 +168,31 @@ def parseParenthesis(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     # )
     expression = state.expectAddingErrorToNode(TokenKind.RIGHT_PARENT, expression)
     return state, expression
+
+def parseArray(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    # {
+    startPosition = state.position
+    assert state.peekKind() == TokenKind.LEFT_CURLY_BRACKET
+    state.advance()
+
+    state, elements = parseExpressionListUntilEndOrDelimiter(state, TokenKind.RIGHT_CURLY_BRACKET)
+
+    # }
+    if state.peekKind() == TokenKind.RIGHT_CURLY_BRACKET:
+        state.advance()
+    else:
+        elements.append(ParseTreeErrorNode(state.currentSourcePosition(), "Expected right parenthesis."))
+
+    return state, ParseTreeArrayNode(state.sourcePositionFrom(startPosition), elements)
+
+def parseReturn(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+    # ^
+    startPosition = state.position
+    assert state.peekKind() == TokenKind.CARET
+    state.advance()
+
+    state, expression = parseExpression(state)
+    return state, ParseTreeReturnNode(state.sourcePositionFrom(startPosition), expression)
 
 def parseLocalVariable(state: ParserState) -> tuple[ParserState, list[ParseTreeNode]]:
     if state.peekKind() == TokenKind.IDENTIFIER:
