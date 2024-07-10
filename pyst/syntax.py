@@ -31,6 +31,9 @@ class ASGSyntaxCascadeMessageNode(ASGSyntaxNode):
     selector = ASGNodeDataInputPort()
     arguments = ASGNodeDataInputPorts()
 
+    def asSyntaxMessageSendNodeWithReceiver(self, derivation: ASGNodeDerivation, receiver: ASGNode):
+        return ASGSyntaxMessageSendNode(derivation, receiver, self.selector, self.arguments)
+
 class ASGSyntaxLexicalSequenceNode(ASGSyntaxNode):
     locals = ASGNodeDataInputPorts()
     pragmas = ASGNodeDataInputPorts()

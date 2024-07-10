@@ -11,6 +11,10 @@ class ASGEnvironment(ABC):
     def lookSymbolBindingListRecursively(self, symbol: str):
         pass
 
+    @abstractmethod
+    def lookSymbolBindingRecursively(self, symbol: str):
+        pass
+
     def isLexicalEnvironment(self):
         return False
 
@@ -68,6 +72,9 @@ class ASGTopLevelTargetEnvironment(ASGEnvironment):
     def lookSymbolBindingListRecursively(self, symbol: str):
         return self.symbolTable.get(symbol, [])
 
+    def lookSymbolBindingRecursively(self, symbol: str):
+        return self.symbolTable.get(symbol, None)
+
     @classmethod
     def uniqueInstance(cls):
         if cls.uniqueInstance_ is None:
@@ -91,6 +98,9 @@ class ASGChildEnvironment(ASGEnvironment):
     def lookSymbolBindingListRecursively(self, symbol: str):
         return self.parent.lookSymbolBindingListRecursively(symbol)
 
+    def lookSymbolBindingRecursively(self, symbol: str):
+        return self.parent.lookSymbolBindingRecursively(symbol)
+
 class ASGChildEnvironmentWithBindings(ASGChildEnvironment):
     def __init__(self, parent: ASGEnvironment, sourcePosition: SourcePosition = None) -> None:
         super().__init__(parent, sourcePosition)
@@ -111,6 +121,11 @@ class ASGChildEnvironmentWithBindings(ASGChildEnvironment):
 
     def lookSymbolBindingListRecursively(self, symbol: str):
         return self.symbolTable.get(symbol, []) + self.parent.lookSymbolBindingListRecursively(symbol)
+
+    def lookSymbolBindingRecursively(self, symbol: str):
+        if symbol in self.symbolTable:
+            return self.symbolTable[symbol]
+        return self.parent.lookSymbolBindingRecursively(symbol)
 
 class ASGLexicalEnvironment(ASGChildEnvironment):
     def isLexicalEnvironment(self):

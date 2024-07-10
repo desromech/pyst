@@ -128,11 +128,10 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
         return expansionResult, expansionErrors
         
     def makeErrorAtNode(self, message: str, node: ASGNode) -> ASGAnalyzedNode:
-        type = self.builder.topLevelIdentifier('Abort')
         innerNodes = []
         if not node.isSyntaxNode():
             innerNodes = [node]
-        errorNode = self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGErrorNode, type, message, innerNodes)
+        errorNode = self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGErrorNode, message, innerNodes)
         self.errorAccumulator.addError(errorNode.asASGDataNode())
         return errorNode
     
@@ -199,24 +198,40 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
         else:
             return self(binding)
 
+    @asgPatternMatchingOnNodeKind(ASGSyntaxMessageCascadeNode)
+    def expandSyntaxBinaryExpressionSequenceNode(self, node: ASGSyntaxMessageCascadeNode) -> ASGAnalyzedNode:
+        receiver = None
+        result = None
+        if node.receiver is not None:
+            receiver = self(node.receiver)
+            result = receiver
+        else:
+            result = self.builder.forSyntaxExpansionBuild(self, node, ASGLiteralNilNode)
+        
+        derivation = ASGNodeSyntaxExpansionDerivation(self, node)
+        for message in node.messages:
+            result = self(message.asSyntaxMessageSendNodeWithReceiver(derivation, receiver))
+        
+        return result
+
     @asgPatternMatchingOnNodeKind(ASGSyntaxMessageSendNode, when = lambda n: n.receiver is None)
     def expandSyntaxMessageSendNodeWithoutReceiver(self, node: ASGSyntaxMessageSendNode) -> ASGAnalyzedNode:
         return self.expandFunctionalApplicationMessageSendNode(node)
 
     @asgPatternMatchingOnNodeKind(ASGSyntaxMessageSendNode, when = lambda n: n.receiver is not None)
     def expandSyntaxMessageSendNodeWithReceiver(self, node: ASGSyntaxMessageSendNode) -> ASGAnalyzedNode:
+        selector = self(node.selector)
+        selectorValue = self.attemptToEvaluateMessageSendSelector(selector)
+        if selectorValue is not None:
+            pass
+
         receiver = self(node.receiver)
-        receiverType = receiver.getTypeInEnvironment(self.environment)
-        return receiverType.expandSyntaxMessageSendNode(self, node)
+        arguments = list(map(self, node.arguments))
+        return self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGFxMessageSendNode, receiver, selector, arguments, predecessor = self.builder.currentPredecessor)
     
-    def attemptToEvaluateMessageSendSelector(self, node: ASGSyntaxMessageSendNode) -> str:
-        symbolType = self.builder.topLevelIdentifier('Symbol')
-        analyzedSelector, typechecked = self.analyzeNodeWithExpectedType(node.selector, symbolType)
-        if not typechecked:
-            return None
-        
-        analyzedSelector = analyzedSelector.asASGDataNode()
-        if analyzedSelector.isLiteralNode():
+    def attemptToEvaluateMessageSendSelector(self, selector: ASGNode) -> str:
+        analyzedSelector = self(selector).asASGDataNode()
+        if analyzedSelector.isLiteralSymbolNode():
             return analyzedSelector.value
         else:
             return None
@@ -228,7 +243,7 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
             if node.receiver is not None: self(node.receiver)
             for arg in node.arguments:
                 self(arg)
-            return self.makeErrorAtNode('Cannot expand message send node without constant selector.', node)
+            return self.makeErrorAtNode('Cannot expand receiverless message send node without constant selector.', node)
 
         selectorIdentifier = ASGSyntaxIdentifierReferenceNode(ASGNodeSyntaxExpansionDerivation(self, node), selectorValue)
         applicationArguments = []
@@ -241,10 +256,9 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
 
     @asgPatternMatchingOnNodeKind(ASGSyntaxApplicationNode)
     def expandSyntaxApplicationNode(self, node: ASGSyntaxApplicationNode) -> ASGAnalyzedNode:
-        self.syntaxPredecessorOf(node)
         functional = self(node.functional)
-        functionalType = functional.getTypeInEnvironment(self.environment)
-        return functionalType.expandSyntaxApplicationNode(self, node)
+        arguments = list(map(self, node.arguments))
+        return self.builder.forSyntaxExpansionBuildAndSequence(self, node, functional, arguments, predecessor = self.builder.currentPredecessor)
 
     def analyzeDivergentBranchExpression(self, node: ASGNode) -> tuple[ASGSequenceEntryNode, ASGNode]:
         branchAnalyzer = self.withDivergingEnvironment(ASGLexicalEnvironment(self.environment, node.sourceDerivation.getSourcePosition()))
@@ -258,23 +272,9 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
             return self.analyzeDivergentBranchExpression(node)
         
         assert False
-        
-    def mergeTypesOfBranches(self, branches: list[ASGNode]):
-        if len(branches) == 0:
-            return self.builder.topLevelIdentifier('Void')
-        
-        mergedBranchType = None
-        for branch in branches:
-            branchType = branch.getTypeInEnvironment(self.environment)
-            if mergedBranchType is None:
-                mergedBranchType = branchType
-            elif not branchType.unificationEquals(mergedBranchType):
-                return None
-        return mergedBranchType
 
     @asgPatternMatchingOnNodeKind(ASGSyntaxSequenceNode)
     def expandSyntaxSequenceNode(self, node: ASGSyntaxSequenceNode) -> ASGAnalyzedNode:
-        self.syntaxPredecessorOf(node)
         if len(node.elements) == 0:
             return self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGLiteralNilNode)
 

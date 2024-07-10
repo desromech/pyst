@@ -579,6 +579,9 @@ class ASGNode(metaclass = ASGNodeMetaclass):
     def isLiteralNode(self) -> bool:
         return False
     
+    def isLiteralSymbolNode(self) -> bool:
+        return False
+
     def asASGSequencingNode(self):
         if self.isPureDataNode():
             return None

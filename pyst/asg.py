@@ -129,6 +129,9 @@ class ASGLiteralFloatNode(ASGLiteralNode):
 class ASGLiteralSymbolNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(str)
 
+    def isLiteralSymbolNode(self) -> bool:
+        return True
+
 class ASGLiteralStringNode(ASGLiteralNode):
     value = ASGNodeDataAttribute(str)
 
@@ -214,7 +217,17 @@ class ASGFxApplicationNode(ASGSequencingAndDataNode):
         functional = context[parameters[0]]
         arguments = list(map(lambda x: context[x], parameters[1:]))
         return functional(*arguments)
-    
+
+class ASGMessageSendNode(ASGAnalyzedDataExpressionNode):
+    receiver = ASGNodeDataInputPort()
+    selector = ASGNodeDataInputPort()
+    arguments = ASGNodeDataInputPorts()
+
+class ASGFxMessageSendNode(ASGSequencingAndDataNode):
+    receiver = ASGNodeDataInputPort()
+    selector = ASGNodeDataInputPort()
+    arguments = ASGNodeDataInputPorts()
+
 class ASGTopLevelScriptNode(ASGAnalyzedDataExpressionNode):
     entryPoint = ASGSequencingDestinationPort()
     exitPoint = ASGSequencingPredecessorAttribute()

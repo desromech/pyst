@@ -1,2 +1,1 @@
-"Stdio stdout nextPutAll: 'Hello World'; nl."
-42
+Stdio stdout nextPutAll: 'Hello World'; nl.
