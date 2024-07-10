@@ -88,6 +88,10 @@ class ASGAnalyzedDataExpressionNode(ASGAnalyzedNode):
     def isPureDataNode(self) -> bool:
         return True
 
+class ASGAnalyzedStatefullExpressionNode(ASGAnalyzedNode):
+    def isPureDataNode(self) -> bool:
+        return False
+
 class ASGSequencingAndDataNode(ASGAnalyzedNode):
     predecessor = ASGSequencingPredecessorAttribute()
 
@@ -233,6 +237,9 @@ class ASGFxMessageSendNode(ASGSequencingAndDataNode):
     receiver = ASGNodeDataInputPort()
     selector = ASGNodeDataInputPort()
     arguments = ASGNodeDataInputPorts()
+
+class ASGMutableArrayNode(ASGAnalyzedStatefullExpressionNode):
+    elements = ASGNodeDataInputPorts()
 
 class ASGTopLevelScriptNode(ASGAnalyzedDataExpressionNode):
     entryPoint = ASGSequencingDestinationPort()

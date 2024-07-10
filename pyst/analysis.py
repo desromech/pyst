@@ -159,7 +159,7 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
     @asgPatternMatchingOnNodeKind(ASGSyntaxArrayNode)
     def expandSyntaxArrayNode(self, node: ASGSyntaxArrayNode) -> ASGAnalyzedNode:
         elements = list(map(self, node.elements))
-        return self.builder.forSyntaxExpansionBuild(self, node, ASGArrayNode, elements)
+        return self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGMutableArrayNode, elements)
 
     @asgPatternMatchingOnNodeKind(ASGSyntaxBinaryExpressionSequenceNode)
     def expandSyntaxBinaryExpressionSequenceNode(self, node: ASGSyntaxBinaryExpressionSequenceNode) -> ASGAnalyzedNode:
