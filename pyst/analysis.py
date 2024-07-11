@@ -230,12 +230,17 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
 
     @asgPatternMatchingOnNodeKind(ASGSyntaxMessageSendNode, when = lambda n: n.receiver is not None)
     def expandSyntaxMessageSendNodeWithReceiver(self, node: ASGSyntaxMessageSendNode) -> ASGAnalyzedNode:
+        from .environment import ValueSelectors
         selector = self(node.selector)
         selectorValue = self.attemptToEvaluateMessageSendSelector(selector)
-        if selectorValue is not None:
-            pass
 
+        # Some optimizations
         receiver = self(node.receiver)
+        if selectorValue is not None:
+            if receiver.isBlockInstanceNode():
+                if selectorValue in ValueSelectors:
+                    return self.fromNodeContinueExpanding(node, ASGSyntaxApplicationNode(ASGNodeSyntaxExpansionDerivation(self, node), receiver, node.arguments))
+
         arguments = list(map(self, node.arguments))
         return self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGFxMessageSendNode, receiver, selector, arguments, predecessor = self.builder.currentPredecessor)
     

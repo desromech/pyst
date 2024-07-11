@@ -761,6 +761,9 @@ class ASGNode(metaclass = ASGNodeMetaclass):
     def isActivationContextParameterDataNode(self):
         return False
 
+    def isBlockInstanceNode(self) -> bool:
+        return False
+    
     def isConstructionDataNode(self):
         return False
 
