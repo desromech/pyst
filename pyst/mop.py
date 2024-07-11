@@ -538,11 +538,6 @@ class ASGNode(metaclass = ASGNodeMetaclass):
 
         return True
 
-    def isSatisfiedAsTypeBy(self, otherType) -> bool:
-        if otherType.isBottomTypeNode():
-            return True
-        return self.unificationEquals(otherType)
-
     def asASGNode(self):
         return self
 
@@ -559,12 +554,6 @@ class ASGNode(metaclass = ASGNodeMetaclass):
         return False
 
     def isTypeNode(self) -> bool:
-        return False
-
-    def isTypeUniverseNode(self) -> bool:
-        return False
-    
-    def isBottomTypeNode(self) -> bool:
         return False
 
     def isPureDataNode(self) -> bool:
