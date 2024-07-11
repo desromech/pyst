@@ -1,9 +1,127 @@
 from .mop import *
 from .syntax import *
 from .asg import *
+import sys
 
-class Stdio:
-    pass
+class PystMetaclass(type):
+    def __new__(cls, name, bases, attributes):
+        assert len(bases) <= 1
+        methodDictionary = {}
+        metaMethodDictionary = {}
+        superclass = None
+        if len(bases) > 0:
+            superclass = bases[0]
+
+        for key, value in attributes.items():
+            if hasattr(value, '__pystSelector__'):
+                methodDictionary[value.__pystSelector__] = value
+            if hasattr(value, '__pystMetaSelector__'):
+                metaMethodDictionary[value.__pystMetaSelector__] = value
+
+        pystClass = super().__new__(cls, name, bases, attributes)
+        pystClass.__pystMethodDictionary__ = methodDictionary
+        pystClass.__pystMetaMethodDictionary__ = metaMethodDictionary
+        pystClass.__pystSuperclass__ = superclass
+        return pystClass
+
+    def lookupMetaSelector(cls, selector):
+        found = cls.__pystMethodDictionary__.get(selector, None)
+        if found is not None:
+            return found
+        if cls.__pystSuperclass__ is not None:
+            return cls.__pystSuperclass__.lookupMetaSelector(selector)
+        return None
+
+    def metaPerformWithArguments(cls, selector, arguments):
+        method = cls.lookupMetaSelector(selector)
+        if method is None:
+            if hasattr(cls, selector):
+                return getattr(cls, selector)
+        assert False
+
+    def lookupSelector(cls, selector):
+        found = cls.__pystMethodDictionary__.get(selector, None)
+        if found is not None:
+            return found
+        if cls.__pystSuperclass__ is not None:
+            return cls.__pystSuperclass__.lookupSelector(selector)
+        return None
+    
+def pystSelector(selector: str):
+    def decorator(func):
+        func.__pystSelector__ = selector
+        return func
+    return decorator
+
+def pystMetaSelector(selector: str):
+    def decorator(func):
+        func.__pystMetaSelector__ = selector
+        return func
+    return decorator
+
+class PystObject(metaclass=PystMetaclass):
+    @pystSelector('doesNotUnderstand:')
+    def doesNotUnderstand(self, message):
+        raise MessageNotUnderstood(self, message)
+
+    def performWithArguments(self, selector, arguments):
+        method = self.__class__.lookupSelector(selector)
+        if method is not None:
+            return method(self, *arguments)
+        
+        if len(arguments) == 0 and hasattr(self, selector):
+            return getattr(self, selector)
+
+        if selector == 'doesNotUnderstand:' and len(arguments) == 1:
+            raise MessageNotUnderstood(self, arguments[0])
+
+        return self.performWithArguments('doesNotUnderstand:', [Message(selector, arguments)])
+
+class Message:
+    def __init__(self, selector: str, arguments):
+        self.selector = selector
+        self.arguments = arguments
+
+    def __str__(self) -> str:
+        return '#' + repr(self.selector)
+
+class MessageNotUnderstood(Exception):
+    def __init__(self, receiver, message, *args: object) -> None:
+        super().__init__(*args)
+        self.receiver = receiver
+        self.message = message
+
+    def __str__(self) -> str:
+        return 'MessageNotUnderstood: %s >> %s' % (repr(self.receiver), str(self.message))
+    
+def performInWithArguments(receiver, selector: str, arguments):
+    if hasattr(receiver, 'metaPerformWithArguments'):
+        return receiver.metaPerformWithArguments(selector, arguments)
+    if hasattr(receiver, 'performWithArguments'):
+        return receiver.performWithArguments(selector, arguments)
+
+    if hasattr(receiver, selector):
+        return getattr(receiver, selector)
+    raise MessageNotUnderstood(receiver, arguments[0])
+
+class FileStream(PystObject):
+    def __init__(self, handle) -> None:
+        self.handle = handle
+
+    @pystSelector('nextPutAll:')
+    def nextPutAll(self, data):
+        self.handle.write(data)
+
+    @pystSelector('nl')
+    def nl(self):
+        self.nextPutAll('\n')
+
+    @pystSelector('print:')
+    def print(self, object):
+        self.nextPutAll(str(object))
+
+class Stdio(PystObject):
+    stdout = FileStream(sys.stdout)
 
 class ASGEnvironment(ABC):
     @abstractmethod

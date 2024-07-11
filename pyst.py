@@ -93,7 +93,7 @@ class FrontEndDriver:
         from pyst.gcm import topLevelScriptGCM
         gcm = topLevelScriptGCM(analyzedSource)
         interpretableScript = gcm.asInterpretableInstructions()
-        print('Toplevel script', interpretableScript.dump())
+        #print('Toplevel script', interpretableScript.dump())
         interpretableScript.dumpDotToFileNamed('toplevelGCM.dot')
         scriptResult = interpretableScript.evaluateWithArguments()
         return scriptResult

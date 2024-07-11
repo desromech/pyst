@@ -284,6 +284,7 @@ class ASGFxMessageSendNode(ASGSequencingAndDataNode):
     arguments = ASGNodeDataInputPorts()
 
     def interpretInContext(self, context, parameters):
+        from .environment import performInWithArguments
         receiver = context[parameters[0]]
         selector = context[parameters[1]]
         arguments = list(map(lambda x: context[x], parameters[2:]))
@@ -291,6 +292,9 @@ class ASGFxMessageSendNode(ASGSequencingAndDataNode):
 
 class ASGMutableArrayNode(ASGAnalyzedStatefullExpressionNode):
     elements = ASGNodeDataInputPorts()
+
+    def interpretInContext(self, context, parameters):
+        return list(map(lambda x: context[x], parameters))
 
 class ASGTopLevelScriptNode(ASGAnalyzedDataExpressionNode):
     entryPoint = ASGSequencingDestinationPort()
