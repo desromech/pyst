@@ -264,11 +264,43 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
         application = ASGSyntaxApplicationNode(ASGNodeSyntaxExpansionDerivation(self, node), selectorIdentifier, applicationArguments)
         return self.fromNodeContinueExpanding(node, application)
 
+    def analyzeArgumentNode(self, functionalAnalyzer, node: ASGSyntaxArgumentNode, index: int) -> ASGArgumentNode:
+        # The first argument name and types are in the context of the parent.
+        argumentAnalyzer = self
+        if index != 0:
+            argumentAnalyzer = functionalAnalyzer
+
+        return argumentAnalyzer.builder.forSyntaxExpansionBuild(functionalAnalyzer, node, ASGArgumentNode, index, node.name).asASGDataNode()
+
     @asgPatternMatchingOnNodeKind(ASGSyntaxApplicationNode)
     def expandSyntaxApplicationNode(self, node: ASGSyntaxApplicationNode) -> ASGAnalyzedNode:
         functional = self(node.functional)
         arguments = list(map(self, node.arguments))
         return self.builder.forSyntaxExpansionBuildAndSequence(self, node, functional, arguments, predecessor = self.builder.currentPredecessor)
+
+    @asgPatternMatchingOnNodeKind(ASGSyntaxBlockNode)
+    def expandSyntaxBlockNode(self, node: ASGSyntaxBlockNode) -> ASGAnalyzedNode:
+        functionalEnvironment = ASGFunctionalAnalysisEnvironment(self.environment, node.sourceDerivation.getSourcePosition())
+        functionalAnalyzer = self.withFunctionalAnalysisEnvironment(functionalEnvironment)
+        analyzedArguments = []
+        arguments = node.arguments
+        for i in range(len(arguments)):
+            argument = arguments[i]
+            analyzedArgument = self.analyzeArgumentNode(functionalAnalyzer, argument, i)
+            if analyzedArgument.isKindOf(ASGArgumentNode):
+                functionalEnvironment.addArgumentBinding(analyzedArgument)
+                analyzedArguments.append(analyzedArgument)
+        functionalAnalyzer.builder.currentPredecessor = None
+        entryPoint = functionalAnalyzer.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGSequenceEntryNode)
+
+        if node.body is None:
+            body = functionalAnalyzer.builder.forSyntaxExpansionBuild(self, node, ASGLiteralNilNode)
+        else:
+            body = functionalAnalyzer(node.body)
+        bodyReturn = functionalAnalyzer.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGSequenceReturnNode, body, predecessor = functionalAnalyzer.builder.currentPredecessor)
+        
+        blockDefinition = self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGBlockDefinitionNode, functionalEnvironment.captureBindings, analyzedArguments, entryPoint, exitPoint = bodyReturn)
+        return self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGBlockInstanceNode,functionalEnvironment.capturedValues, blockDefinition)
 
     def analyzeDivergentBranchExpression(self, node: ASGNode) -> tuple[ASGSequenceEntryNode, ASGNode]:
         branchAnalyzer = self.withDivergingEnvironment(ASGLexicalEnvironment(self.environment, node.sourceDerivation.getSourcePosition()))

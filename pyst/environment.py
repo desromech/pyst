@@ -93,7 +93,9 @@ class MessageNotUnderstood(Exception):
 
     def __str__(self) -> str:
         return 'MessageNotUnderstood: %s >> %s' % (repr(self.receiver), str(self.message))
-    
+
+ValueSelectors = set(['value', 'value:', 'value:value:', 'value:value:value:', 'value:value:value:value:'])
+
 def performInWithArguments(receiver, selector: str, arguments):
     if hasattr(receiver, 'metaPerformWithArguments'):
         return receiver.metaPerformWithArguments(selector, arguments)
@@ -102,7 +104,12 @@ def performInWithArguments(receiver, selector: str, arguments):
 
     if hasattr(receiver, selector):
         return getattr(receiver, selector)
-    raise MessageNotUnderstood(receiver, arguments[0])
+    
+    if callable(receiver) and selector in ValueSelectors:
+        return receiver(*arguments)
+    if selector == 'doesNotUndertand:':
+        raise MessageNotUnderstood(receiver, arguments[0])
+    return performInWithArguments(receiver, 'doesNotUndertand:', (Message(selector, arguments),))
 
 class FileStream(PystObject):
     def __init__(self, handle) -> None:
@@ -262,6 +269,8 @@ class ASGFunctionalAnalysisEnvironment(ASGLexicalEnvironment):
     def __init__(self, parent: ASGEnvironment, sourcePosition: SourcePosition = None) -> None:
         super().__init__(parent, sourcePosition)
         self.arguments = []
+        self.capturedValues = []
+        self.captureBindings = []
         self.symbolTable = {}
 
     def addArgumentBinding(self, argument: ASGArgumentNode):
@@ -271,6 +280,11 @@ class ASGFunctionalAnalysisEnvironment(ASGLexicalEnvironment):
 
     def lookSymbolBindingListRecursively(self, symbol: str):
         return self.symbolTable.get(symbol, []) + self.parent.lookSymbolBindingListRecursively(symbol)
+
+    def lookSymbolBindingRecursively(self, symbol: str):
+        if symbol in self.symbolTable:
+            return self.symbolTable[symbol][0]
+        return self.parent.lookSymbolBindingRecursively(symbol)
 
 class ASGScriptEnvironment(ASGLexicalEnvironment):
     def __init__(self, parent: ASGEnvironment, sourcePosition: SourcePosition = None, scriptDirectory = '', scriptName = 'script') -> None:

@@ -320,7 +320,7 @@ class GlobalCodeMotionAlgorithm:
 
         return sortedPhiInstructions + sortedInstructions + sortedPhiValueInstructions
 
-def blockGCM(node: ASGBlockNode):
+def blockGCM(node: ASGBlockDefinitionNode):
     blockWithGcm = GlobalCodeMotionAlgorithm(node).computeForBlock()
     return blockWithGcm
 

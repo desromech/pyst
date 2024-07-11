@@ -207,7 +207,6 @@ class ASGBetaReplaceableNode(ASGAnalyzedDataExpressionNode):
 class ASGArgumentNode(ASGBetaReplaceableNode):
     index = ASGNodeDataAttribute(int, default = 0)
     name = ASGNodeDataAttribute(str, default = None, notCompared = True)
-    isImplicit = ASGNodeDataAttribute(bool, default = False)
 
     def isArgumentNode(self) -> bool:
         return True
@@ -239,11 +238,17 @@ class ASGArrayNode(ASGAnalyzedDataExpressionNode):
             self.hasEvaluatedConstantValue = True
         return self.constantEvaluationResult
 
-class ASGBlockNode(ASGAnalyzedDataExpressionNode):
+class ASGBlockDefinitionNode(ASGAnalyzedDataExpressionNode):
     arguments = ASGNodeDataInputPorts(notInterpreted = True)
+    captures = ASGNodeDataInputPorts(notInterpreted = True)
     entryPoint = ASGSequencingDestinationPort(notInterpreted = True)
     exitPoint = ASGSequencingPredecessorAttribute(notInterpreted = True)
     name = ASGNodeDataAttribute(str, default = None, notCompared = True)
+
+    def __init__(self, *positionalArguments, **kwArguments) -> None:
+        super().__init__(*positionalArguments, **kwArguments)
+        self.hasEvaluatedConstantValue = False
+        self.constantEvaluationResult = None
 
     def scheduledDataDependencies(self):
         return ()
@@ -251,8 +256,44 @@ class ASGBlockNode(ASGAnalyzedDataExpressionNode):
     def isConstantDataNode(self) -> bool:
         return True
 
-    def isBlock(self) -> bool:
+    def isBlockDefinitionNode(self) -> bool:
         return True
+
+    def evaluateAsConstantValue(self):
+        if not self.hasEvaluatedConstantValue:
+            from .gcm import blockGCM
+            self.constantEvaluationResult = blockGCM(self).asInterpretableInstructions()
+            self.hasEvaluatedConstantValue = True
+        return self.constantEvaluationResult
+
+class ASGBlockInstanceNode(ASGAnalyzedDataExpressionNode):
+    captures = ASGNodeDataInputPorts()
+    definition = ASGNodeDataInputPort()
+
+    def __init__(self, *positionalArguments, **kwArguments) -> None:
+        super().__init__(*positionalArguments, **kwArguments)
+        self.isConstantDataNode_ = None
+        self.hasEvaluatedConstantValue = False
+        self.constantEvaluationResult = None
+
+    def scheduledDataDependencies(self):
+        return ()
+
+    def isConstantDataNode(self) -> bool:
+        if self.isConstantDataNode_ is None:
+            self.isConstantDataNode_ = all(capture.isConstantDataNode() for capture in self.captures)
+        return self.isConstantDataNode_
+
+    def isBlockInstanceNode(self) -> bool:
+        return True
+
+    def evaluateAsConstantValue(self):
+        if not self.hasEvaluatedConstantValue:
+            captureConstants = list(map(lambda c: c.evaluateAsConstantValue(), self.captures))
+            definitionValue = self.definition.evaluateAsConstantValue()
+            self.constantEvaluationResult = definitionValue.instantiateClosureWithCaptures(self.captures)
+            self.hasEvaluatedConstantValue = True
+        return self.constantEvaluationResult
 
 class ASGApplicationNode(ASGAnalyzedDataExpressionNode):
     functional = ASGNodeDataInputPort()

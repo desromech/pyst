@@ -117,7 +117,7 @@ class ASGParseTreeFrontEnd(ParseTreeVisitor):
         return ASGSyntaxBinaryExpressionSequenceNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.transformNodes(node.elements))
 
     def visitBlockNode(self, node: ParseTreeBlockNode):
-        return ASGSyntaxBlockNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.visitNode(node.arguments), self.visitNode(node.body))
+        return ASGSyntaxBlockNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.transformNodes(node.arguments), self.visitNode(node.body))
 
     def visitCascadeMessageNode(self, node: ParseTreeCascadeMessageNode):
         return ASGSyntaxCascadeMessageNode(ASGNodeSourceCodeDerivation(node.sourcePosition), self.visitNode(node.selector), self.transformNodes(node.arguments))

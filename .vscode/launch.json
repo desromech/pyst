@@ -26,6 +26,22 @@
             "program": "${workspaceFolder}/pyst.py",
             "args": ["samples/02-helloWorldPrintingObjects.st"],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Pyst Sample 03 - Block",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyst.py",
+            "args": ["samples/03-block.st"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Pyst Sample 04 - Block Call",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyst.py",
+            "args": ["samples/04-blockCall.st"],
+            "console": "integratedTerminal"
         }
     ]
 }

@@ -1,3 +1,4 @@
+from typing import Any
 from .mop import *
 from .asg import *
 
@@ -27,8 +28,11 @@ class ASGNodeWithInterpretableInstructions:
             self.parametersLists.append(parameterList)
 
     def evaluateWithArguments(self, *args):
-        activationContext = ASGNodeInterpreterActivationContext(self.startpc, args, self)
+        activationContext = ASGNodeInterpreterActivationContext(self.startpc, None, args, self)
         return activationContext.execute()
+
+    def instantiateClosureWithCaptures(self, captures):
+        return ASGClosureInstance(self, captures)
 
     def dump(self) -> str:
         result = ''
@@ -78,9 +82,19 @@ class ASGNodeWithInterpretableInstructions:
         with open(filename, "w") as f:
             f.write(self.dumpDot())
 
+class ASGClosureInstance:
+    def __init__(self, instructions: ASGNodeWithInterpretableInstructions, captures: list) -> None:
+        self.instructions = instructions
+        self.captures = captures
+
+    def __call__(self, *args: Any) -> Any:
+        activationContext = ASGNodeInterpreterActivationContext(self.instructions.startpc, self.captures, args, self.instructions)
+        return activationContext.execute()
+
 class ASGNodeInterpreterActivationContext:
-    def __init__(self, pc, activationParameters, instructions: ASGNodeWithInterpretableInstructions) -> None:
+    def __init__(self, pc, captureVector: list, activationParameters, instructions: ASGNodeWithInterpretableInstructions) -> None:
         self.pc = pc
+        self.captureVector = captureVector
         self.data = [None] * instructions.activationContextSize
         self.instructions = instructions
         self.result = None
