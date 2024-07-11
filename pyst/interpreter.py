@@ -28,7 +28,7 @@ class ASGNodeWithInterpretableInstructions:
             self.parametersLists.append(parameterList)
 
     def evaluateWithArguments(self, *args):
-        activationContext = ASGNodeInterpreterActivationContext(self.startpc, None, args, self)
+        activationContext = ASGNodeInterpreterActivationContext(self.startpc, (), args, self)
         return activationContext.execute()
 
     def instantiateClosureWithCaptures(self, captures):
@@ -94,14 +94,17 @@ class ASGClosureInstance:
 class ASGNodeInterpreterActivationContext:
     def __init__(self, pc, captureVector: list, activationParameters, instructions: ASGNodeWithInterpretableInstructions) -> None:
         self.pc = pc
-        self.captureVector = captureVector
         self.data = [None] * instructions.activationContextSize
         self.instructions = instructions
         self.result = None
         self.shouldReturn = None
 
+        captureVectorSize = len(captureVector)
+        for i in range(captureVectorSize):
+            self.data[i] = captureVector[i]
+
         for i in range(len(activationParameters)):
-            self.data[i] = activationParameters[i]
+            self.data[captureVectorSize + i] = activationParameters[i]
 
     def execute(self):
         self.shouldReturn = False

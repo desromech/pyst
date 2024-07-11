@@ -42,6 +42,22 @@
             "program": "${workspaceFolder}/pyst.py",
             "args": ["samples/04-blockCall.st"],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Pyst Sample 05 - Inner Block",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyst.py",
+            "args": ["samples/05-innerBlock.st"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Pyst Sample 06 - Inner Block Call",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyst.py",
+            "args": ["samples/06-innerBlockCall.st"],
+            "console": "integratedTerminal"
         }
     ]
 }

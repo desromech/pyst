@@ -61,22 +61,22 @@ class GlobalCodeMotionAlgorithm:
         self.scheduleRegions = []
 
     def computeForBlock(self):
-        blockNode: ASGBlockNode = self.functionalNode
-        self.computeForRegions(asgPredecessorTopo(blockNode.exitPoint))
+        blockNode: ASGBlockDefinitionNode = self.functionalNode
+        self.computeForRegions(blockNode.captures + blockNode.arguments, asgPredecessorTopo(blockNode.exitPoint))
         return self.serializeInstructions()
 
     def computeForTopLevelScript(self):
         topLevelScript: ASGTopLevelScriptNode = self.functionalNode
-        self.computeForRegions(asgPredecessorTopo(topLevelScript.exitPoint))
+        self.computeForRegions([], asgPredecessorTopo(topLevelScript.exitPoint))
         return self.serializeInstructions()
 
     def dependenciesOf(self, instruction):
         for dep in instruction.scheduledDataDependencies():
             yield dep
 
-    def computeForRegions(self, regions):
+    def computeForRegions(self, activationParameters, regions):
         self.regions = regions
-        self.findDataInstructions()
+        self.findDataInstructions(activationParameters)
         self.computeUserLists()
         for i in range(len(regions)):
             region = regions[i]
@@ -103,7 +103,7 @@ class GlobalCodeMotionAlgorithm:
         self.earlyScheduleInstructions()
         self.lateScheduleInstructions()
 
-    def findDataInstructions(self):
+    def findDataInstructions(self, activationParameters):
         visited = set()
         self.dataInstructions = []
         self.dataInstructionIndexDictionary = {}
@@ -130,6 +130,8 @@ class GlobalCodeMotionAlgorithm:
                     self.dataInstructionIndexDictionary[node] = len(self.dataInstructions)
                     self.dataInstructions.append(node)
 
+        for activationParameter in activationParameters:
+            traverseNode(activationParameter)
         for region in self.regions:
             traverseNode(region)
 

@@ -1,0 +1,1 @@
+Stdio stdout print: [:x | [x]] (42)(); nl

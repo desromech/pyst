@@ -136,10 +136,6 @@ class ASGEnvironment(ABC):
         pass
 
     @abstractmethod
-    def lookSymbolBindingListRecursively(self, symbol: str):
-        pass
-
-    @abstractmethod
     def lookSymbolBindingRecursively(self, symbol: str):
         pass
 
@@ -199,9 +195,6 @@ class ASGTopLevelTargetEnvironment(ASGEnvironment):
     def getTopLevelTargetEnvironment(self):
         return self
     
-    def lookSymbolBindingListRecursively(self, symbol: str):
-        return self.symbolTable.get(symbol, [])
-
     def lookSymbolBindingRecursively(self, symbol: str):
         result = self.symbolTable.get(symbol, None)
         if result is not None:
@@ -229,9 +222,6 @@ class ASGChildEnvironment(ASGEnvironment):
     def getTopLevelTargetEnvironment(self):
         return self.topLevelTargetEnvironment
 
-    def lookSymbolBindingListRecursively(self, symbol: str):
-        return self.parent.lookSymbolBindingListRecursively(symbol)
-
     def lookSymbolBindingRecursively(self, symbol: str):
         return self.parent.lookSymbolBindingRecursively(symbol)
 
@@ -253,9 +243,6 @@ class ASGChildEnvironmentWithBindings(ASGChildEnvironment):
         child.addSymbolBinding(symbol, binding)
         return child
 
-    def lookSymbolBindingListRecursively(self, symbol: str):
-        return self.symbolTable.get(symbol, []) + self.parent.lookSymbolBindingListRecursively(symbol)
-
     def lookSymbolBindingRecursively(self, symbol: str):
         if symbol in self.symbolTable:
             return self.symbolTable[symbol][0]
@@ -272,19 +259,41 @@ class ASGFunctionalAnalysisEnvironment(ASGLexicalEnvironment):
         self.capturedValues = []
         self.captureBindings = []
         self.symbolTable = {}
+        self.capturedSymbolTable = {}
+        self.capturedValueTable = {}
 
     def addArgumentBinding(self, argument: ASGArgumentNode):
         self.arguments.append(argument)
         if argument.name is not None:
             self.symbolTable[argument.name] = [argument] + self.symbolTable.get(argument.name, [])
 
-    def lookSymbolBindingListRecursively(self, symbol: str):
-        return self.symbolTable.get(symbol, []) + self.parent.lookSymbolBindingListRecursively(symbol)
+    def getValidCaptureBindingFor(self, capturedValue):
+        if capturedValue in self.capturedValueTable:
+            return self.capturedValueTable[capturedValue]
+        
+        binding = ASGCapturedValueNode(capturedValue.sourceDerivation, len(self.capturedValues))
+        self.capturedValues.append(capturedValue)
+        self.captureBindings.append(binding)
+        self.capturedValueTable[capturedValue] = binding
+        return binding
 
     def lookSymbolBindingRecursively(self, symbol: str):
         if symbol in self.symbolTable:
             return self.symbolTable[symbol][0]
-        return self.parent.lookSymbolBindingRecursively(symbol)
+        
+        if symbol in self.capturedSymbolTable:
+            return self.capturedSymbolTable[symbol]
+
+        parentBinding = self.parent.lookSymbolBindingRecursively(symbol)
+        if parentBinding is None:
+            return None
+        
+        if parentBinding.isBetaReplaceableNode():
+            captureBinding = self.getValidCaptureBindingFor(parentBinding)
+            self.capturedSymbolTable[symbol] = captureBinding
+            return captureBinding
+        
+        return parentBinding
 
 class ASGScriptEnvironment(ASGLexicalEnvironment):
     def __init__(self, parent: ASGEnvironment, sourcePosition: SourcePosition = None, scriptDirectory = '', scriptName = 'script') -> None:

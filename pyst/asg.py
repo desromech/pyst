@@ -79,7 +79,7 @@ class ASGSequenceReturnNode(ASGSequencingNode):
         return self.predecessor
 
     def getRegionOfUsedValue(self, usedValue):
-        return self
+        return self.predecessor
     
     def interpretInContext(self, context, parameters):
         context.returnValue(context[parameters[0]])
@@ -215,6 +215,8 @@ class ASGArgumentNode(ASGBetaReplaceableNode):
         return True
 
 class ASGCapturedValueNode(ASGBetaReplaceableNode):
+    index = ASGNodeDataAttribute(int)
+
     def isCapturedValueNode(self) -> bool:
         return True
 
@@ -263,6 +265,8 @@ class ASGBlockDefinitionNode(ASGAnalyzedDataExpressionNode):
         if not self.hasEvaluatedConstantValue:
             from .gcm import blockGCM
             self.constantEvaluationResult = blockGCM(self).asInterpretableInstructions()
+            #print('Block instructions')
+            #print(self.constantEvaluationResult.dump())
             self.hasEvaluatedConstantValue = True
         return self.constantEvaluationResult
 
@@ -275,9 +279,6 @@ class ASGBlockInstanceNode(ASGAnalyzedDataExpressionNode):
         self.isConstantDataNode_ = None
         self.hasEvaluatedConstantValue = False
         self.constantEvaluationResult = None
-
-    def scheduledDataDependencies(self):
-        return ()
 
     def isConstantDataNode(self) -> bool:
         if self.isConstantDataNode_ is None:
@@ -294,6 +295,12 @@ class ASGBlockInstanceNode(ASGAnalyzedDataExpressionNode):
             self.constantEvaluationResult = definitionValue.instantiateClosureWithCaptures(self.captures)
             self.hasEvaluatedConstantValue = True
         return self.constantEvaluationResult
+
+    def interpretInContext(self, context, parameters):
+        capturesAndDefinition = list(map(lambda x: context[x], parameters))
+        captures = capturesAndDefinition[:-1]
+        definition = capturesAndDefinition[-1]
+        return definition.instantiateClosureWithCaptures(captures)
 
 class ASGApplicationNode(ASGAnalyzedDataExpressionNode):
     functional = ASGNodeDataInputPort()
