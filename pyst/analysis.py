@@ -276,7 +276,7 @@ class ASGExpansionAndAnalysisAlgorithm(ASGDynamicProgrammingAlgorithm):
     def expandSyntaxApplicationNode(self, node: ASGSyntaxApplicationNode) -> ASGAnalyzedNode:
         functional = self(node.functional)
         arguments = list(map(self, node.arguments))
-        return self.builder.forSyntaxExpansionBuildAndSequence(self, node, functional, arguments, predecessor = self.builder.currentPredecessor)
+        return self.builder.forSyntaxExpansionBuildAndSequence(self, node, ASGFxApplicationNode, functional, arguments, predecessor = self.builder.currentPredecessor)
 
     @asgPatternMatchingOnNodeKind(ASGSyntaxBlockNode)
     def expandSyntaxBlockNode(self, node: ASGSyntaxBlockNode) -> ASGAnalyzedNode:
