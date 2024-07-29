@@ -442,7 +442,10 @@ def parseCascadedMessage(state: ParserState) -> tuple[ParserState, ParseTreeNode
         selector = ParseTreeLiteralSymbolNode(firstKeywordSourcePosition.to(lastKeywordSourcePosition), symbolValue)
         return state, ParseTreeCascadeMessageNode(state.sourcePositionFrom(startPosition), selector, arguments)
     elif isBinaryExpressionOperator(state.peekKind()):
-        assert False
+        state.advance()
+        selector = ParseTreeLiteralSymbolNode(token.sourcePosition, token.getStringValue())
+        state, argument = parseUnaryPostfixExpression(state)
+        return state, ParseTreeCascadeMessageNode(state.sourcePositionFrom(startPosition), selector, [argument])
     else:
         return state, ParseTreeErrorNode(state.currentSourcePosition(), 'Expected a cascaded message send.')
 
