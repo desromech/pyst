@@ -36,7 +36,7 @@ class TestScanner(unittest.TestCase):
     def testKeywordSymbol(self):
         self.assertEqual(self.scanTokenKinds("#keyword:"), [TokenKind.SYMBOL, TokenKind.END_OF_SOURCE])
 
-    def testOperator(self):
+    def testSymbolOperator(self):
         self.assertEqual(self.scanTokenKinds("#<"), [TokenKind.SYMBOL, TokenKind.END_OF_SOURCE])
         self.assertEqual(self.scanTokenKinds("#|"), [TokenKind.SYMBOL, TokenKind.END_OF_SOURCE])
         self.assertEqual(self.scanTokenKinds("#+"), [TokenKind.SYMBOL, TokenKind.END_OF_SOURCE])
